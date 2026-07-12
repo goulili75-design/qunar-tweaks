@@ -1,4 +1,4 @@
-// QNByPass - 去哪儿越狱屏蔽 (完整版 v5)
+// QNByPass - 去哪儿越狱屏蔽 v5b
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
@@ -6,7 +6,6 @@
 #import <errno.h>
 #import <sys/sysctl.h>
 #import <sys/stat.h>
-#import <dlfcn.h>
 #import <unistd.h>
 #import "substrate.h"
 
@@ -100,24 +99,6 @@ static pid_t hook_fork(void) { errno = EPERM; return -1; }
 static int (*orig_system)(const char *);
 static int hook_system(const char *c) { errno = EPERM; return -1; }
 
-// dladdr — dylib 加载检测
-static int (*orig_dladdr)(const void *, Dl_info *);
-static int hook_dladdr(const void *addr, Dl_info *info) {
-    int ret = orig_dladdr(addr, info);
-    if (ret != 0 && info && info->dli_fname) {
-        const char *f = info->dli_fname;
-        if (strstr(f,"SubstrateLoader") || strstr(f,"TweakInject") ||
-            strstr(f,"frida") || strstr(f,"CydiaSubstrate") ||
-            strstr(f,"libhooker") || strstr(f,"Substitute")) {
-            info->dli_fname = "/usr/lib/libSystem.B.dylib";
-            info->dli_sname = NULL;
-            info->dli_saddr = NULL;
-        }
-        // 不要拦截 ATHelper / qninjector / libsubstrate！
-    }
-    return ret;
-}
-
 // ============ Constructor ============
 __attribute__((constructor))
 static void qnbypass_init(void) {
@@ -152,7 +133,6 @@ static void qnbypass_init(void) {
     MSHookFunction((void *)access, (void *)hook_access, (void **)&orig_access);
     MSHookFunction((void *)fork, (void *)hook_fork, (void **)&orig_fork);
     MSHookFunction((void *)system, (void *)hook_system, (void **)&orig_system);
-    MSHookFunction((void *)dladdr, (void *)hook_dladdr, (void **)&orig_dladdr);
     
     NSLog(@"[QNByPass] Loaded OK!");
 }
