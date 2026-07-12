@@ -57,12 +57,6 @@ static NSDictionary *hook_pe(id s, SEL c) {
 // fork 沙箱检测
 static pid_t (*orig_f)(void);
 static pid_t hook_f(void) { errno = EPERM; return -1; }
-// stat 文件检测
-static int (*orig_stat)(const char *, struct stat *);
-static int hook_stat(const char *p, struct stat *b) {
-    if (p && (strstr(p, "/var/jb") || strstr(p, "Cydia") || strstr(p, "Sileo"))) { errno = ENOENT; return -1; }
-    return orig_stat(p, b);
-}
 
 __attribute__((constructor))
 static void init(void) {
@@ -92,7 +86,6 @@ static void init(void) {
     
     MSHookFunction((void *)sysctlbyname, (void *)hook_sbn, (void **)&orig_sbn);
     MSHookFunction((void *)fork, (void *)hook_f, (void **)&orig_f);
-    MSHookFunction((void *)stat, (void *)hook_stat, (void **)&orig_stat);
     
     NSLog(@"[QNByPass] All hooks active!");
 }
