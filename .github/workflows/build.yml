@@ -27,27 +27,20 @@ jobs:
 
     - name: Setup Theos
       run: |
-        # 克隆 Theos (先浅克隆，再拉取子模块)
-        git clone --depth 1 https://github.com/theos/theos.git /opt/theos 2>&1 || {
-          echo "First attempt failed, trying with retry..."
-          sleep 5
-          git clone --depth 1 https://github.com/theos/theos.git /opt/theos
+        # 配置 git 以避免 clone 问题
+        git config --global http.postBuffer 524288000
+        git config --global http.lowSpeedLimit 0
+        git config --global http.lowSpeedTime 999999
+        
+        # Clone theos (不递归，先只克隆主仓库)
+        GIT_TERMINAL_PROMPT=0 git clone --depth 1 --single-branch https://github.com/theos/theos.git /opt/theos 2>&1 || {
+          echo "Retry with GIT_TRACE..."
+          GIT_TRACE=1 GIT_CURL_VERBOSE=1 git clone --depth 1 --single-branch https://github.com/theos/theos.git /opt/theos 2>&1
         }
         
-        # 初始化子模块
-        cd /opt/theos
-        git submodule update --init --recursive --depth 1 2>&1 || {
-          echo "Submodule init failed, trying individual..."
-          git submodule foreach --recursive 'git fetch --depth 1 origin && git checkout HEAD' 2>&1 || true
-        }
-        
-        # 设置环境变量
         echo "THEOS=/opt/theos" >> $GITHUB_ENV
         echo "/opt/theos/bin" >> $GITHUB_PATH
-        
-        echo "Theos installed at /opt/theos"
-        ls /opt/theos/bin/ || echo "bin not found, checking structure..."
-        ls /opt/theos/ || true
+        ls /opt/theos/bin/ && echo "Theos OK"
 
     - name: Setup iOS SDK
       run: |
