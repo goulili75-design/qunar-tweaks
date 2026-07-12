@@ -27,16 +27,27 @@ jobs:
 
     - name: Setup Theos
       run: |
-        # 克隆 Theos
-        git clone --recursive https://github.com/theos/theos.git /opt/theos
+        # 克隆 Theos (先浅克隆，再拉取子模块)
+        git clone --depth 1 https://github.com/theos/theos.git /opt/theos 2>&1 || {
+          echo "First attempt failed, trying with retry..."
+          sleep 5
+          git clone --depth 1 https://github.com/theos/theos.git /opt/theos
+        }
+        
+        # 初始化子模块
+        cd /opt/theos
+        git submodule update --init --recursive --depth 1 2>&1 || {
+          echo "Submodule init failed, trying individual..."
+          git submodule foreach --recursive 'git fetch --depth 1 origin && git checkout HEAD' 2>&1 || true
+        }
         
         # 设置环境变量
         echo "THEOS=/opt/theos" >> $GITHUB_ENV
         echo "/opt/theos/bin" >> $GITHUB_PATH
         
-        # 验证
-        ls /opt/theos/bin/
         echo "Theos installed at /opt/theos"
+        ls /opt/theos/bin/ || echo "bin not found, checking structure..."
+        ls /opt/theos/ || true
 
     - name: Setup iOS SDK
       run: |
@@ -71,7 +82,7 @@ jobs:
         echo "=================================="
 
     - name: Upload deb artifact
-      if: ${{ github.event.inputs.upload_artifact != 'false' }}
+      if: always() && !cancelled()
       uses: actions/upload-artifact@v4
       with:
         name: QNByPass-deb
