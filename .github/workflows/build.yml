@@ -1,0 +1,83 @@
+name: Build QNByPass Tweak
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'QNByPass/**'
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:      # 支持手动触发
+    inputs:
+      upload_artifact:
+        description: 'Upload deb as artifact'
+        type: boolean
+        default: true
+
+jobs:
+  build:
+    runs-on: macos-13     # x86_64 macOS (Theos 最佳兼容性)
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Theos
+      run: |
+        # 克隆 Theos
+        git clone --recursive https://github.com/theos/theos.git /opt/theos
+        
+        # 设置环境变量
+        echo "THEOS=/opt/theos" >> $GITHUB_ENV
+        echo "/opt/theos/bin" >> $GITHUB_PATH
+        
+        # 验证
+        ls /opt/theos/bin/
+        echo "Theos installed at /opt/theos"
+
+    - name: Setup iOS SDK
+      run: |
+        # 创建 sdks 目录
+        mkdir -p /opt/theos/sdks
+        
+        # 从 Xcode 获取 SDK 路径
+        SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
+        echo "SDK found at: $SDK_PATH"
+        
+        # 获取实际 SDK 版本
+        SDK_VERSION=$(xcrun --sdk iphoneos --show-sdk-version)
+        echo "SDK version: $SDK_VERSION"
+        
+        # 软链接 SDK 到 Theos（Theos 需要 iPhoneOS16.0.sdk 及以上的命名格式）
+        ln -s "$SDK_PATH" "/opt/theos/sdks/iPhoneOS${SDK_VERSION}.sdk"
+        
+        # 验证
+        ls /opt/theos/sdks/
+        echo "SDK linked successfully"
+
+    - name: Build Tweak
+      run: |
+        cd QNByPass
+        echo "Building QNByPass..."
+        make clean 2>/dev/null || true
+        make package FINALPACKAGE=1
+        
+        echo ""
+        echo "========== Build Output =========="
+        ls -la packages/
+        echo "=================================="
+
+    - name: Upload deb artifact
+      if: ${{ github.event.inputs.upload_artifact != 'false' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: QNByPass-deb
+        path: QNByPass/packages/*.deb
+        retention-days: 30
+
+    - name: Release (on tag push)
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: QNByPass/packages/*.deb
+        generate_release_notes: true

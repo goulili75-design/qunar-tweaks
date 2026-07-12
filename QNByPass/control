@@ -1,0 +1,11 @@
+Package: com.yourcompany.qnbypass
+Name: QNByPass
+Version: 1.0.0
+Architecture: iphoneos-arm64
+Description: 去哪儿旅行越狱屏蔽插件 - Dopamine RootHide兼容
+Maintainer: YourName <your@email.com>
+Author: YourName <your@email.com>
+Section: Tweaks
+Depends: mobilesubstrate, firmware (>= 14.0)
+Conflicts: 
+Replaces: 
