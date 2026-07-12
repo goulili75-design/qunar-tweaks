@@ -2,7 +2,7 @@
 #import "ViewController.h"
 #import <stdlib.h>
 
-#define CONFIG_PATH @"/var/jb/var/mobile/Documents/.qnbypass_config.plist"
+#define CONFIG_PATH @"/var/jb/var/mobile/Library/Preferences/.qnbypass.plist"
 #define QUNAR_BUNDLE @"com.qunar.iphoneclient"
 
 @implementation ViewController {
@@ -80,7 +80,11 @@
     NSMutableDictionary *d = [NSMutableDictionary dictionaryWithContentsOfFile:CONFIG_PATH];
     return d ?: [NSMutableDictionary dictionary];
 }
-- (void)saveConfig:(NSDictionary *)dict { [dict writeToFile:CONFIG_PATH atomically:YES]; }
+- (void)saveConfig:(NSDictionary *)dict {
+    // 确保目录存在
+    [[NSFileManager defaultManager] createDirectoryAtPath:@"/var/jb/var/mobile/Library/Preferences" withIntermediateDirectories:YES attributes:nil error:nil];
+    [dict writeToFile:CONFIG_PATH atomically:YES];
+}
 - (void)refreshStatus {
     NSDictionary *cfg = [self loadConfig];
     BOOL en = [cfg[@"enabled"] boolValue];
