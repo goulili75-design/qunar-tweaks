@@ -31,5 +31,5 @@ jobs:
         path: |
           QNByPass/App/QNByPass.app/**
           QNByPass/QNByPass.dylib
-          QNByPass/layout/Library/MobileSubstrate/DynamicLibraries/QNByPass.plist
+          QNByPass/filter.plist
         retention-days: 30

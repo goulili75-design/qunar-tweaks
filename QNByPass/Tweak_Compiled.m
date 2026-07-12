@@ -46,6 +46,10 @@ static pid_t hook_f(void) { errno = EPERM; return -1; }
 
 __attribute__((constructor))
 static void init(void) {
+    // 仅注入去哪儿进程
+    NSString *proc = [[NSProcessInfo processInfo] processName];
+    if (![proc isEqualToString:@"QunariPhone_Cook_CM"]) return;
+    
     wlog(@"=== CONSTRUCTOR STARTED ===");
     Class c = NSClassFromString(@"UIDevice");
     wlog(c ? @"UIDevice found" : @"UIDevice NOT FOUND");
