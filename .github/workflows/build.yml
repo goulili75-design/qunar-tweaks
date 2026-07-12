@@ -11,17 +11,27 @@ jobs:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Build All
+    - name: Build Tweak
       run: |
+        cd QNByPass
         SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+        xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -I. -dynamiclib -framework Foundation -framework UIKit -Wl,-undefined,dynamic_lookup -o QNByPass.dylib Tweak_Compiled.m
+        ldid -S QNByPass.dylib 2>/dev/null || true
+        echo "Tweak OK"
+    - name: Build App
+      run: |
         cd QNByPass/App
+        SDK=$(xcrun --sdk iphoneos --show-sdk-path)
         xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -framework UIKit -framework Foundation -o QNByPass main.m AppDelegate.m ViewController.m
         mkdir -p QNByPass.app && cp QNByPass QNByPass.app/ && cp Info.plist QNByPass.app/
-        cd ..
-        xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -I. -dynamiclib -framework Foundation -framework UIKit -Wl,-undefined,dynamic_lookup -o QNByPass.dylib Tweak_Compiled.m
+        echo "App OK"
+    - name: Build Daemon
+      run: |
+        cd QNByPass
+        SDK=$(xcrun --sdk iphoneos --show-sdk-path)
         xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -o qninjectd qninjectd.c
-        ldid -S QNByPass.dylib 2>/dev/null; ldid -S qninjectd 2>/dev/null; true
-        echo "All built"
+        ldid -S qninjectd 2>/dev/null || true
+        echo "Daemon OK"
     - name: Package DEB
       run: |
         cd QNByPass
