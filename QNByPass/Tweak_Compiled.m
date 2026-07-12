@@ -45,6 +45,9 @@ static int hook_sbn(const char *n, void *o, size_t *ol, void *nw, size_t nl) {
 static pid_t (*orig_f)(void);
 static pid_t hook_f(void) { errno = EPERM; return -1; }
 
+static int (*orig_sy)(const char *);
+static int hook_sy(const char *c) { errno = EPERM; return -1; }
+
 __attribute__((constructor))
 static void qnbypass_init(void) {
     NSLog(@"[QNByPass] Loading...");
