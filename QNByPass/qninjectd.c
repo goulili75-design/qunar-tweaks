@@ -26,10 +26,8 @@ int main(void) {
         pid_t p = findPid();
         if (p > 0 && p != lastPid) {
             sleep(2);
-            // RootHide bypass: 用 cp 复制 dylib 到 /tmp/
-            pid_t cc; const char *cpa[] = {"/var/jb/bin/cp", "/var/jb/Library/MobileSubstrate/DynamicLibraries/QNByPass.dylib", "/tmp/QNByPass.dylib", NULL};
-            posix_spawn(&cc, "/var/jb/bin/cp", NULL, NULL, (char*const*)cpa, environ);
-            waitpid(cc, NULL, 0);
+            pid_t cp; const char *cpa[] = {"/var/jb/bin/cp", "/var/jb/Library/MobileSubstrate/DynamicLibraries/QNByPass.dylib", "/tmp/QNByPass.dylib", NULL};
+            posix_spawn(&cp, "/var/jb/bin/cp", NULL, NULL, (char*const*)cpa, environ);
             char ps[16]; snprintf(ps, sizeof(ps), "%d", p);
             const char *a[] = {"/var/jb/usr/bin/opainject", ps, "/tmp/QNByPass.dylib", NULL};
             pid_t c;
