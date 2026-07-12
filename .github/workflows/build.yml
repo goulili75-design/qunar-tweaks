@@ -23,7 +23,7 @@ jobs:
         repository: theos/theos
         path: theos
         ref: master
-        submodules: false
+        submodules: true
 
     - name: Setup Theos Environment & SDK
       run: |
