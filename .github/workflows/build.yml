@@ -11,11 +11,22 @@ jobs:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Build
+    - name: Build Test
       run: |
         cd QNByPass
         SDK=$(xcrun --sdk iphoneos --show-sdk-path)
-        xcrun -sdk iphoneos clang++ -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -I. -dynamiclib -install_name /Library/MobileSubstrate/DynamicLibraries/QNByPass.dylib -framework Foundation -framework UIKit -Wl,-undefined,dynamic_lookup -o QNByPass.dylib Tweak_Compiled.mm
+        echo "SDK: $SDK"
+        echo "== Test compile =="
+        xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -dynamiclib -framework Foundation -o test.dylib test.m 2>&1
+        echo "Exit: $?"
+        ls -la test.dylib
+    - name: Build Tweak
+      run: |
+        cd QNByPass
+        SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+        echo "== Build tweak =="
+        xcrun -sdk iphoneos clang++ -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -I. -dynamiclib -framework Foundation -framework UIKit -Wl,-undefined,dynamic_lookup -o QNByPass.dylib Tweak_Compiled.mm 2>&1
+        echo "Exit: $?"
         ls -la QNByPass.dylib
         file QNByPass.dylib
     - name: Upload
