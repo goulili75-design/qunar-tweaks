@@ -1,7 +1,6 @@
 // ViewController.m - 改机主界面
 #import "ViewController.h"
 #import <stdlib.h>
-#import <dlfcn.h>
 
 #define CONFIG_PATH @"/var/jb/var/mobile/Documents/.qnbypass_config.plist"
 #define QUNAR_BUNDLE @"com.qunar.iphoneclient"
@@ -143,14 +142,12 @@
 
 // ========== 清除钥匙串 ==========
 - (void)clearKeychain {
-    // 调用 security 命令清除 Qunar 相关钥匙串
-    system("security delete-keychain 2>/dev/null");
-    // 逐个删除 keychain items (keychain_dumper 方式)
-    FILE *f = popen("dpkg -L com.qunar.iphoneclient 2>/dev/null; ls /var/jb/var/Keychains/keychain-2.db 2>/dev/null", "r");
-    if (f) pclose(f);
-    // 最简单方案：删除整个 keychain 中 Qunar 的项
-    system("sqlite3 /var/jb/var/Keychains/keychain-2.db \"DELETE FROM genp WHERE agrp LIKE '%qunar%';\" 2>/dev/null");
-    system("sqlite3 /var/jb/var/Keychains/keychain-2.db \"DELETE FROM inet WHERE agrp LIKE '%qunar%';\" 2>/dev/null");
+    // 直接删除 keychain 中 Qunar 的项
+    int ret = system("sqlite3 /var/jb/var/Keychains/keychain-2.db \"DELETE FROM genp WHERE agrp LIKE '%qunar%'; DELETE FROM inet WHERE agrp LIKE '%qunar%';\" 2>/dev/null");
+    if (ret != 0) {
+        [self showAlert:@"⚠️ 部分成功" msg:@"钥匙串清除可能不完整，请手动在设置中清除"];
+        return;
+    }
     [self showAlert:@"✅ 钥匙串已清除" msg:@"Qunar 相关钥匙串项已删除"];
 }
 
