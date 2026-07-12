@@ -17,48 +17,79 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Setup Theos
-      uses: actions/checkout@v4
-      with:
-        repository: theos/theos
-        path: theos
-        ref: master
-        submodules: true
-
-    - name: Setup Theos Environment & SDK
-      run: |
-        # 移动 theos 到正确位置
-        sudo mv theos /opt/theos
-        sudo chmod -R 755 /opt/theos
-        
-        echo "THEOS=/opt/theos" >> $GITHUB_ENV
-        echo "/opt/theos/bin" >> $GITHUB_PATH
-        
-        # 链接 SDK
-        SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
-        SDK_VER=$(xcrun --sdk iphoneos --show-sdk-version)
-        echo "SDK: $SDK_PATH (v$SDK_VER)"
-        mkdir -p /opt/theos/sdks
-        ln -sf "$SDK_PATH" "/opt/theos/sdks/iPhoneOS${SDK_VER}.sdk"
-        
-        # 验证
-        ls /opt/theos/sdks/
-        echo "Theos ready!"
-
-    - name: Compile Tweak
+    - name: Build Dylib
       run: |
         cd QNByPass
-        echo "Building with Theos..."
-        make clean 2>/dev/null || true
-        make package FINALPACKAGE=1 2>&1
-        echo "=== Result ==="
-        ls -la packages/ 2>/dev/null || echo "No packages dir"
+        
+        # Install ldid for pseudo-signing
+        brew install ldid 2>/dev/null || true
+        
+        SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+        echo "SDK: $SDK"
+        
+        # 编译纯 ObjC++ (无需 Logos 预处理)
+        xcrun -sdk iphoneos clang++ \
+          -arch arm64 \
+          -miphoneos-version-min=14.0 \
+          -isysroot "$SDK" \
+          -fobjc-arc -fobjc-exceptions \
+          -I. \
+          -dynamiclib \
+          -install_name /Library/MobileSubstrate/DynamicLibraries/QNByPass.dylib \
+          -framework Foundation -framework UIKit \
+          -o QNByPass.dylib \
+          Tweak_Compiled.mm 2>&1
+        
+        EXIT=$?
+        echo "Exit code: $EXIT"
+        
+        if [ $EXIT -eq 0 ] && [ -f QNByPass.dylib ]; then
+          echo "=== SUCCESS ==="
+          ls -la QNByPass.dylib
+          file QNByPass.dylib
+          
+          # 伪签名
+          ldid -S QNByPass.dylib 2>/dev/null || codesign -s - QNByPass.dylib 2>/dev/null || true
+        else
+          echo "=== FAILED ==="
+          exit 1
+        fi
+
+    - name: Package DEB
+      run: |
+        cd QNByPass
+        
+        mkdir -p deb_pkg/DEBIAN
+        mkdir -p deb_pkg/Library/MobileSubstrate/DynamicLibraries
+        
+        cp QNByPass.dylib deb_pkg/Library/MobileSubstrate/DynamicLibraries/
+        cp layout/Library/MobileSubstrate/DynamicLibraries/QNByPass.plist deb_pkg/Library/MobileSubstrate/DynamicLibraries/
+        
+        cat > deb_pkg/DEBIAN/control << 'EOF'
+Package: com.yourcompany.qnbypass
+Name: QNByPass
+Version: 1.0.0
+Architecture: iphoneos-arm64
+Description: Qunar jailbreak bypass for Dopamine RootHide
+Maintainer: goulili75
+Author: goulili75
+Section: Tweaks
+Depends: mobilesubstrate
+EOF
+        
+        mkdir -p packages
+        dpkg-deb -Zgzip -b deb_pkg packages/com.yourcompany.qnbypass_1.0.0_iphoneos-arm64.deb 2>&1 || {
+          echo "dpkg-deb failed, trying without..."
+          dpkg-deb -b deb_pkg packages/out.deb 2>&1
+          mv packages/out.deb packages/com.yourcompany.qnbypass_1.0.0_iphoneos-arm64.deb 2>/dev/null
+        }
+        
+        echo "=== Package ==="
+        ls -la packages/
 
     - name: Upload deb
       uses: actions/upload-artifact@v4
       with:
         name: QNByPass-deb
-        path: |
-          QNByPass/packages/*.deb
-          QNByPass/*.deb
+        path: QNByPass/packages/*.deb
         retention-days: 30
