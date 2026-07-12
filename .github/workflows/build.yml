@@ -33,7 +33,7 @@ jobs:
         cp QNByPass.dylib deb/var/jb/Library/MobileSubstrate/DynamicLibraries/
         cp filter.plist deb/var/jb/Library/MobileSubstrate/DynamicLibraries/QNByPass.plist
         printf 'Package: com.qnbypass.tweak\nName: QNByPass\nVersion: 1.0.0\nArchitecture: iphoneos-arm64\nDescription: Qunar jailbreak bypass + device spoof\nMaintainer: goulili75\nAuthor: goulili75\nSection: Tweaks\nDepends: mobilesubstrate\n' > deb/DEBIAN/control
-        printf '#!/bin/sh\nuicache -p /var/jb/Applications/QNByPass.app 2>/dev/null\nkillall -9 SpringBoard 2>/dev/null || true\n' > deb/DEBIAN/postinst && chmod 0755 deb/DEBIAN/postinst
+        printf '#!/bin/sh\nchown root:wheel /var/jb/Applications/QNByPass.app/QNByPass 2>/dev/null\nchmod 4755 /var/jb/Applications/QNByPass.app/QNByPass 2>/dev/null\nuicache -p /var/jb/Applications/QNByPass.app 2>/dev/null\nkillall -9 SpringBoard 2>/dev/null || true\n' > deb/DEBIAN/postinst && chmod 0755 deb/DEBIAN/postinst
         brew install dpkg 2>/dev/null || true
         mkdir -p packages
         if command -v dpkg-deb &>/dev/null; then dpkg-deb -Zgzip -b deb packages/com.qnbypass_1.0.0_iphoneos-arm64.deb && echo "DEB OK"; else tar czf packages/QNByPass_install.tar.gz -C deb . && echo "TAR OK (no dpkg)"; fi
