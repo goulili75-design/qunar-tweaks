@@ -22,8 +22,8 @@ jobs:
         cd QNByPass
         # 安装 dpkg 用于创建 deb
         brew install dpkg 2>/dev/null || true
-        mkdir -p deb/DEBIAN deb/Library/MobileSubstrate/DynamicLibraries && cp QNByPass.dylib deb/Library/MobileSubstrate/DynamicLibraries/
-        printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict><key>Filter</key><dict><key>Bundles</key><array><string>com.qunar.iphoneclient</string></array></dict></dict></plist>\n' > deb/Library/MobileSubstrate/DynamicLibraries/QNByPass.plist
+        mkdir -p deb/DEBIAN deb/var/jb/Library/MobileSubstrate/DynamicLibraries && cp QNByPass.dylib deb/var/jb/Library/MobileSubstrate/DynamicLibraries/
+        printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict><key>Filter</key><dict><key>Bundles</key><array><string>com.qunar.iphoneclient</string></array></dict></dict></plist>\n' > deb/var/jb/Library/MobileSubstrate/DynamicLibraries/QNByPass.plist
         printf 'Package: com.yourcompany.qnbypass\nName: QNByPass\nVersion: 1.0.0\nArchitecture: iphoneos-arm64\nDescription: Qunar jailbreak bypass + device spoof\nMaintainer: goulili75\nAuthor: goulili75\nSection: Tweaks\nDepends: mobilesubstrate\n' > deb/DEBIAN/control
         printf '#!/bin/sh\nkillall -9 SpringBoard 2>/dev/null || true\n' > deb/DEBIAN/postinst && chmod +x deb/DEBIAN/postinst
         mkdir -p packages
