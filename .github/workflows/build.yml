@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: macos-13     # x86_64 macOS (Theos 最佳兼容性)
+    runs-on: macos-latest     # 最新 macOS 运行器 (14/M1)
     
     steps:
     - name: Checkout
