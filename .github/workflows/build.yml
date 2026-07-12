@@ -1,4 +1,4 @@
-name: Build App+Tweak
+name: Build QNByPass DEB
 on:
   push:
     branches: [main, master]
@@ -11,25 +11,36 @@ jobs:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Build App
+    - name: Build All
       run: |
+        SDK=$(xcrun --sdk iphoneos --show-sdk-path)
         cd QNByPass/App
-        SDK=$(xcrun --sdk iphoneos --show-sdk-path)
         xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -framework UIKit -framework Foundation -o QNByPass main.m AppDelegate.m ViewController.m
-        mkdir -p QNByPass.app && cp QNByPass QNByPass.app/ && cp Info.plist QNByPass.app/ && ls -la QNByPass
-    - name: Build Tweak
-      run: |
+        mkdir -p QNByPass.app && cp QNByPass QNByPass.app/ && cp Info.plist QNByPass.app/
+        cd ../..
         cd QNByPass
-        SDK=$(xcrun --sdk iphoneos --show-sdk-path)
         xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -I. -dynamiclib -framework Foundation -framework UIKit -Wl,-undefined,dynamic_lookup -o QNByPass.dylib Tweak_Compiled.m
         ldid -S QNByPass.dylib 2>/dev/null || true
-        ls -la QNByPass.dylib
+        echo "All built"
+    - name: Package DEB
+      run: |
+        cd QNByPass
+        mkdir -p deb/DEBIAN
+        mkdir -p deb/var/jb/Applications/QNByPass.app
+        mkdir -p deb/var/jb/Library/MobileSubstrate/DynamicLibraries
+        cp App/QNByPass.app/QNByPass deb/var/jb/Applications/QNByPass.app/
+        cp App/Info.plist deb/var/jb/Applications/QNByPass.app/
+        cp QNByPass.dylib deb/var/jb/Library/MobileSubstrate/DynamicLibraries/
+        cp filter.plist deb/var/jb/Library/MobileSubstrate/DynamicLibraries/QNByPass.plist
+        printf 'Package: com.qnbypass.tweak\nName: QNByPass\nVersion: 1.0.0\nArchitecture: iphoneos-arm64\nDescription: Qunar jailbreak bypass + device spoof\nMaintainer: goulili75\nAuthor: goulili75\nSection: Tweaks\nDepends: mobilesubstrate\n' > deb/DEBIAN/control
+        printf '#!/bin/sh\nuicache -p /var/jb/Applications/QNByPass.app 2>/dev/null\nkillall -9 SpringBoard 2>/dev/null || true\n' > deb/DEBIAN/postinst && chmod 0755 deb/DEBIAN/postinst
+        brew install dpkg 2>/dev/null || true
+        mkdir -p packages
+        if command -v dpkg-deb &>/dev/null; then dpkg-deb -Zgzip -b deb packages/com.qnbypass_1.0.0_iphoneos-arm64.deb && echo "DEB OK"; else tar czf packages/QNByPass_install.tar.gz -C deb . && echo "TAR OK (no dpkg)"; fi
+        ls -la packages/
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: QNByPass-App
-        path: |
-          QNByPass/App/QNByPass.app/**
-          QNByPass/QNByPass.dylib
-          QNByPass/filter.plist
+        name: QNByPass-DEB
+        path: QNByPass/packages/*
         retention-days: 30
