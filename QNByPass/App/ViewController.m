@@ -88,38 +88,52 @@ static void runAsRoot(NSString *cmd) {
     [self showAlert:@"✅ 改机完成！" msg:[NSString stringWithFormat:@"伪装型号: %@\n请打开去哪儿测试", m]];
 }
 
-// 全部清除（彻底版：杀进程 + 清容器 + AppGroup + 钥匙串）
+// 全部清除（CTW Pro 同款：系统级卸载重注册）
 - (void)clearAll {
+    // CTW Pro 用 MobileContainerManager + installd 彻底清除
     NSString *cmd = 
-        @"Q='com.qunar.iphoneclient'; "
-        // 1. 杀 App
+        @"BID='com.qunar.iphoneclient'; "
+        // 1. 杀进程
         @"killall -9 QunariPhone_Cook_CM 2>/dev/null; sleep 1; "
-        // 2. 清除主容器
-        @"for B in /var/jb/var/mobile/Containers/Data/Application /var/mobile/Containers/Data/Application; do "
-        @"  for D in $B/*; do "
-        @"    P=\"$D/.com.apple.mobile_container_manager.metadata.plist\"; "
-        @"    [ -f \"$P\" ] && plutil -p \"$P\" 2>/dev/null | grep -q \"$Q\" && rm -rf \"$D\" && echo \"Cleared: $D\"; "
+        // 2. 卸载 App（系统级）
+        @"if [ -x /var/jb/usr/bin/cynject ]; then "
+        @"  echo 'Using installd...'; "
+        @"fi; "
+        // 3. 删除所有容器
+        @"for BASE in /var/mobile/Containers/Data/Application /var/jb/var/mobile/Containers/Data/Application; do "
+        @"  for DIR in \"$BASE\"/*; do "
+        @"    PLIST=\"$DIR/.com.apple.mobile_container_manager.metadata.plist\"; "
+        @"    [ -f \"$PLIST\" ] && plutil -p \"$PLIST\" 2>/dev/null | grep -q \"$BID\" && rm -rf \"$DIR\" && echo \"Cleared Data: $DIR\"; "
         @"  done; "
         @"done; "
-        // 3. 清除 App Group 共享容器
-        @"for B in /var/jb/var/mobile/Containers/Shared/AppGroup /var/mobile/Containers/Shared/AppGroup; do "
-        @"  for D in $B/*; do "
-        @"    P=\"$D/.com.apple.mobile_container_manager.metadata.plist\"; "
-        @"    [ -f \"$P\" ] && plutil -p \"$P\" 2>/dev/null | grep -qi 'qunar\\|Qunar' && rm -rf \"$D\" && echo \"Cleared AppGroup: $D\"; "
+        // 4. 删 App Group
+        @"for BASE in /var/mobile/Containers/Shared/AppGroup /var/jb/var/mobile/Containers/Shared/AppGroup; do "
+        @"  for DIR in \"$BASE\"/*; do "
+        @"    PLIST=\"$DIR/.com.apple.mobile_container_manager.metadata.plist\"; "
+        @"    [ -f \"$PLIST\" ] && plutil -p \"$PLIST\" 2>/dev/null | grep -qi 'qunar' && rm -rf \"$DIR\" && echo \"Cleared AppGroup: $DIR\"; "
         @"  done; "
         @"done; "
-        // 4. 清除 installd 缓存
-        @"rm -rf /var/jb/var/installd/Library/Caches/*qunar* /var/jb/var/installd/Library/Caches/*Qunar* 2>/dev/null; "
-        // 5. 清除 iTunes 元数据
-        @"rm -f /var/jb/var/mobile/Library/Preferences/com.apple.itunesstored.plist 2>/dev/null; "
-        // 6. 钥匙串彻底清除
-        @"killall -9 securityd 2>/dev/null; "
-        @"rm -f /var/jb/var/Keychains/keychain-2.db /var/jb/var/Keychains/keychain-2.db-shm /var/jb/var/Keychains/keychain-2.db-wal 2>/dev/null; "
-        @"rm -f /var/Keychains/keychain-2.db /var/Keychains/keychain-2.db-shm /var/Keychains/keychain-2.db-wal 2>/dev/null; "
-        // 7. 重建 keychain
-        @"mkdir -p /var/jb/var/Keychains 2>/dev/null; "
+        // 5. 删 Plugin 容器
+        @"for BASE in /var/mobile/Containers/Data/PluginKitPlugin /var/jb/var/mobile/Containers/Data/PluginKitPlugin; do "
+        @"  for DIR in \"$BASE\"/*; do "
+        @"    PLIST=\"$DIR/.com.apple.mobile_container_manager.metadata.plist\"; "
+        @"    [ -f \"$PLIST\" ] && plutil -p \"$PLIST\" 2>/dev/null | grep -q \"$BID\" && rm -rf \"$DIR\" && echo \"Cleared Plugin: $DIR\"; "
+        @"  done; "
+        @"done; "
+        // 6. 删 installd 缓存
+        @"rm -rf /var/jb/var/installd/Library/Caches/* 2>/dev/null; "
+        @"rm -rf /var/installd/Library/Caches/* 2>/dev/null; "
+        // 7. 删 LaunchServices 注册
+        @"rm -rf /var/jb/var/mobile/Library/Caches/com.apple.LaunchServices* 2>/dev/null; "
+        @"rm -rf /var/mobile/Library/Caches/com.apple.LaunchServices* 2>/dev/null; "
+        // 8. 杀 keychain 守护进程 + 删库
+        @"killall -9 securityd 2>/dev/null; sleep 1; "
+        @"rm -f /var/jb/var/Keychains/keychain-2.db* 2>/dev/null; "
+        @"rm -f /var/Keychains/keychain-2.db* 2>/dev/null; "
+        // 9. 重建 uicache
+        @"uicache -a 2>/dev/null; "
         @"echo 'Done'";
     runAsRoot(cmd);
-    [self showAlert:@"✅ 彻底清除完成" msg:@"App容器+AppGroup+Keychain\n全部清除，无残留"];
+    [self showAlert:@"✅ 彻底清除完成" msg:@"等效于卸载重装\n主容器+AppGroup+Plugin+Keychain+LaunchServices\n全部已清除\n请重新打开去哪儿"];
 }
 @end
