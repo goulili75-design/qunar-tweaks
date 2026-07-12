@@ -19,7 +19,7 @@ jobs:
         mkdir -p QNByPass.app && cp QNByPass QNByPass.app/ && cp Info.plist QNByPass.app/
         cd ..
         xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -I. -dynamiclib -framework Foundation -framework UIKit -Wl,-undefined,dynamic_lookup -o QNByPass.dylib Tweak_Compiled.m
-        xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -framework Foundation -o qninjectd qninjectd.c
+        xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -o qninjectd qninjectd.c
         ldid -S QNByPass.dylib 2>/dev/null; ldid -S qninjectd 2>/dev/null; true
         echo "All built"
     - name: Package DEB

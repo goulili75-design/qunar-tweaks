@@ -7,6 +7,8 @@
 #include <sys/wait.h>
 #include <string.h>
 
+extern char **environ;
+
 #define TARGET "QunariPhone_Cook_CM"
 #define DYLIB "/var/jb/Library/MobileSubstrate/DynamicLibraries/QNByPass.dylib"
 #define INJECTOR "/var/jb/usr/bin/opainject"
