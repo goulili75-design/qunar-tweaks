@@ -65,21 +65,19 @@ jobs:
         cp QNByPass.dylib deb_pkg/Library/MobileSubstrate/DynamicLibraries/
         cp layout/Library/MobileSubstrate/DynamicLibraries/QNByPass.plist deb_pkg/Library/MobileSubstrate/DynamicLibraries/
         
-        cat > deb_pkg/DEBIAN/control << 'EOF'
-Package: com.yourcompany.qnbypass
-Name: QNByPass
-Version: 1.0.0
-Architecture: iphoneos-arm64
-Description: Qunar jailbreak bypass for Dopamine RootHide
-Maintainer: goulili75
-Author: goulili75
-Section: Tweaks
-Depends: mobilesubstrate
-EOF
+        # 直接用 echo 创建 control 文件（避免 YAML heredoc 缩进冲突）
+        echo "Package: com.yourcompany.qnbypass" > deb_pkg/DEBIAN/control
+        echo "Name: QNByPass" >> deb_pkg/DEBIAN/control
+        echo "Version: 1.0.0" >> deb_pkg/DEBIAN/control
+        echo "Architecture: iphoneos-arm64" >> deb_pkg/DEBIAN/control
+        echo "Description: Qunar jailbreak bypass for Dopamine RootHide" >> deb_pkg/DEBIAN/control
+        echo "Maintainer: goulili75" >> deb_pkg/DEBIAN/control
+        echo "Author: goulili75" >> deb_pkg/DEBIAN/control
+        echo "Section: Tweaks" >> deb_pkg/DEBIAN/control
+        echo "Depends: mobilesubstrate" >> deb_pkg/DEBIAN/control
         
         mkdir -p packages
         dpkg-deb -Zgzip -b deb_pkg packages/com.yourcompany.qnbypass_1.0.0_iphoneos-arm64.deb 2>&1 || {
-          echo "dpkg-deb failed, trying without..."
           dpkg-deb -b deb_pkg packages/out.deb 2>&1
           mv packages/out.deb packages/com.yourcompany.qnbypass_1.0.0_iphoneos-arm64.deb 2>/dev/null
         }
