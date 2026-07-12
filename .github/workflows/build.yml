@@ -19,35 +19,11 @@ jobs:
         ls -la QNByPass.dylib
     - name: Package DEB
       run: |
-        cd QNByPass
-        mkdir -p deb/DEBIAN
-        mkdir -p deb/Library/MobileSubstrate/DynamicLibraries
-        cp QNByPass.dylib deb/Library/MobileSubstrate/DynamicLibraries/
-        cp layout/Library/MobileSubstrate/DynamicLibraries/QNByPass.plist deb/Library/MobileSubstrate/DynamicLibraries/ 2>/dev/null || cat > deb/Library/MobileSubstrate/DynamicLibraries/QNByPass.plist << 'PL'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict><key>Filter</key><dict><key>Bundles</key><array><string>com.qunar.iphoneclient</string></array></dict></dict></plist>
-PL
-        cat > deb/DEBIAN/control << 'CTL'
-Package: com.yourcompany.qnbypass
-Name: QNByPass
-Version: 1.0.0
-Architecture: iphoneos-arm64
-Description: Qunar travel jailbreak bypass + device spoofing
-Maintainer: goulili75
-Author: goulili75
-Section: Tweaks
-Depends: mobilesubstrate
-CTL
-        cat > deb/DEBIAN/postinst << 'PI'
-#!/bin/sh
-killall -9 SpringBoard 2>/dev/null || true
-PI
-        chmod +x deb/DEBIAN/postinst
-        mkdir -p packages
-        dpkg-deb -Zgzip -b deb packages/com.yourcompany.qnbypass_1.0.0_iphoneos-arm64.deb 2>&1 || {
-          echo "dpkg-deb failed, creating tar.gz"; tar czf packages/QNByPass.tar.gz -C deb .
-        }
+        cd QNByPass && mkdir -p deb/DEBIAN deb/Library/MobileSubstrate/DynamicLibraries && cp QNByPass.dylib deb/Library/MobileSubstrate/DynamicLibraries/
+        printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict><key>Filter</key><dict><key>Bundles</key><array><string>com.qunar.iphoneclient</string></array></dict></dict></plist>\n' > deb/Library/MobileSubstrate/DynamicLibraries/QNByPass.plist
+        printf 'Package: com.yourcompany.qnbypass\nName: QNByPass\nVersion: 1.0.0\nArchitecture: iphoneos-arm64\nDescription: Qunar jailbreak bypass + device spoof\nMaintainer: goulili75\nAuthor: goulili75\nSection: Tweaks\nDepends: mobilesubstrate\n' > deb/DEBIAN/control
+        printf '#!/bin/sh\nkillall -9 SpringBoard 2>/dev/null || true\n' > deb/DEBIAN/postinst && chmod +x deb/DEBIAN/postinst
+        mkdir -p packages && dpkg-deb -Zgzip -b deb packages/com.yourcompany.qnbypass_1.0.0_iphoneos-arm64.deb || tar czf packages/QNByPass.tar.gz -C deb .
         ls -la packages/
     - name: Upload
       uses: actions/upload-artifact@v4
