@@ -87,22 +87,24 @@ static void runAsRoot(NSString *cmd) {
     [self showAlert:@"✅ 改机完成！" msg:[NSString stringWithFormat:@"伪装型号: %@\n请打开去哪儿测试", m]];
 }
 
-// 全部清除（合并清除数据+钥匙串+登录状态，root执行）
+// 全部清除（只清除去哪儿，不动其他App）
 - (void)clearAll {
-    runAsRoot(
-        @"rm -rf /var/jb/var/mobile/Containers/Data/Application/*/Library/Caches/*qunar* 2>/dev/null; "
-        @"rm -rf /var/jb/var/mobile/Containers/Data/Application/*/Library/Cookies 2>/dev/null; "
-        @"rm -rf /var/jb/var/mobile/Containers/Data/Application/*/Library/Preferences/*qunar* 2>/dev/null; "
-        @"rm -rf /var/jb/var/mobile/Containers/Data/Application/*/Documents 2>/dev/null; "
-        @"rm -rf /var/jb/var/mobile/Containers/Data/Application/*/tmp 2>/dev/null; "
-        @"rm -rf /var/mobile/Containers/Data/Application/*/Library/Caches/*qunar* 2>/dev/null; "
-        @"rm -rf /var/mobile/Containers/Data/Application/*/Library/Cookies 2>/dev/null; "
-        @"rm -rf /var/mobile/Containers/Data/Application/*/Library/Preferences/*qunar* 2>/dev/null; "
-        @"rm -rf /var/mobile/Containers/Data/Application/*/Documents 2>/dev/null; "
-        @"rm -rf /var/mobile/Containers/Data/Application/*/tmp 2>/dev/null; "
+    NSString *cmd = 
+        @"QUNAR='com.qunar.iphoneclient'; "
+        @"for BASE in /var/jb/var/mobile/Containers/Data/Application /var/mobile/Containers/Data/Application; do "
+        @"  for DIR in $BASE/*; do "
+        @"    PLIST=\"$DIR/.com.apple.mobile_container_manager.metadata.plist\"; "
+        @"    if [ -f \"$PLIST\" ] && plutil -p \"$PLIST\" 2>/dev/null | grep -q \"$QUNAR\"; then "
+        @"      echo \"Found Qunar: $DIR\"; "
+        @"      rm -rf \"$DIR\"/Library/Caches \"$DIR\"/Library/Cookies \"$DIR\"/Library/Preferences \"$DIR\"/Documents \"$DIR\"/tmp 2>/dev/null; "
+        @"      echo \"Cleared $DIR\"; "
+        @"    fi; "
+        @"  done; "
+        @"done; "
         @"rm -f /var/jb/var/Keychains/keychain-2.db* 2>/dev/null; "
-        @"rm -f /var/Keychains/keychain-2.db* 2>/dev/null"
-    );
-    [self showAlert:@"✅ 全部清除完成" msg:@"App数据 + 登录状态 + 钥匙串\n已全部删除\n请重新打开去哪儿"];
+        @"rm -f /var/Keychains/keychain-2.db* 2>/dev/null; "
+        @"echo 'Done'";
+    runAsRoot(cmd);
+    [self showAlert:@"✅ 已清除" msg:@"只清除了去哪儿App的数据+钥匙串\n其他App不受影响"];
 }
 @end
