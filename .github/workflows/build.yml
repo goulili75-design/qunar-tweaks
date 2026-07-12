@@ -19,11 +19,21 @@ jobs:
         ls -la QNByPass.dylib
     - name: Package DEB
       run: |
-        cd QNByPass && mkdir -p deb/DEBIAN deb/Library/MobileSubstrate/DynamicLibraries && cp QNByPass.dylib deb/Library/MobileSubstrate/DynamicLibraries/
+        cd QNByPass
+        # 安装 dpkg 用于创建 deb
+        brew install dpkg 2>/dev/null || true
+        mkdir -p deb/DEBIAN deb/Library/MobileSubstrate/DynamicLibraries && cp QNByPass.dylib deb/Library/MobileSubstrate/DynamicLibraries/
         printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict><key>Filter</key><dict><key>Bundles</key><array><string>com.qunar.iphoneclient</string></array></dict></dict></plist>\n' > deb/Library/MobileSubstrate/DynamicLibraries/QNByPass.plist
         printf 'Package: com.yourcompany.qnbypass\nName: QNByPass\nVersion: 1.0.0\nArchitecture: iphoneos-arm64\nDescription: Qunar jailbreak bypass + device spoof\nMaintainer: goulili75\nAuthor: goulili75\nSection: Tweaks\nDepends: mobilesubstrate\n' > deb/DEBIAN/control
         printf '#!/bin/sh\nkillall -9 SpringBoard 2>/dev/null || true\n' > deb/DEBIAN/postinst && chmod +x deb/DEBIAN/postinst
-        mkdir -p packages && dpkg-deb -Zgzip -b deb packages/com.yourcompany.qnbypass_1.0.0_iphoneos-arm64.deb || tar czf packages/QNByPass.tar.gz -C deb .
+        mkdir -p packages
+        if command -v dpkg-deb &>/dev/null; then
+          dpkg-deb -Zgzip -b deb packages/com.yourcompany.qnbypass_1.0.0_iphoneos-arm64.deb && echo "DEB created!"
+        else
+          echo "dpkg-deb not available, creating tar.gz + install script"
+          tar czf packages/QNByPass_files.tar.gz -C deb .
+          printf '#!/bin/sh\necho "Installing QNByPass...";\ncp -r Library /var/jb/ 2>/dev/null || cp -r Library /\nkillall -9 SpringBoard 2>/dev/null\necho "Done! Open Qunar app."\n' > packages/install.sh && chmod +x packages/install.sh
+        fi
         ls -la packages/
     - name: Upload
       uses: actions/upload-artifact@v4
