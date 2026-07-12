@@ -137,7 +137,7 @@ static void hookUIApplication(void) {
 
 static NSDictionary *(*orig_environment)(id, SEL);
 static NSDictionary *hooked_environment(id self, SEL _cmd) {
-    NSMutableDictionary *env = [[orig_environment(self, _cmd) mutableCopy] autorelease];
+    NSMutableDictionary *env = [orig_environment(self, _cmd) mutableCopy];
     [env removeObjectForKey:@"DYLD_INSERT_LIBRARIES"];
     [env removeObjectForKey:@"DYLD_LIBRARY_PATH"];
     return env;
