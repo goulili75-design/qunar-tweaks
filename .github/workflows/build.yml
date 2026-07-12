@@ -24,10 +24,10 @@ jobs:
         
         SDK=$(xcrun --sdk iphoneos --show-sdk-path)
         echo "SDK: $SDK"
-        echo "Files in .:"
         ls -la
         
-        # 编译纯 ObjC++ (无需 Logos 预处理)
+        # 编译纯 ObjC++ dylib
+        # -undefined dynamic_lookup: substrate 函数在运行时解析
         xcrun -sdk iphoneos clang++ \
           -arch arm64 \
           -miphoneos-version-min=14.0 \
@@ -37,10 +37,11 @@ jobs:
           -dynamiclib \
           -install_name /Library/MobileSubstrate/DynamicLibraries/QNByPass.dylib \
           -framework Foundation -framework UIKit \
+          -Wl,-undefined,dynamic_lookup \
           -o QNByPass.dylib \
-          Tweak_Compiled.mm 2>&1
+          Tweak_Compiled.mm
         
-        echo "=== Dylib built ==="
+        echo "=== Build OK ==="
         ls -la QNByPass.dylib
         file QNByPass.dylib
         
