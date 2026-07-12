@@ -19,26 +19,30 @@ jobs:
 
     - name: Build Dylib
       run: |
+        set -e
         cd QNByPass
-        
-        # Install ldid for pseudo-signing
-        brew install ldid 2>/dev/null || true
         
         SDK=$(xcrun --sdk iphoneos --show-sdk-path)
         echo "SDK: $SDK"
+        echo "Files in .:"
+        ls -la
         
         # 编译纯 ObjC++ (无需 Logos 预处理)
         xcrun -sdk iphoneos clang++ \
           -arch arm64 \
           -miphoneos-version-min=14.0 \
           -isysroot "$SDK" \
-          -fobjc-arc -fobjc-exceptions \
+          -fobjc-arc \
           -I. \
           -dynamiclib \
           -install_name /Library/MobileSubstrate/DynamicLibraries/QNByPass.dylib \
           -framework Foundation -framework UIKit \
           -o QNByPass.dylib \
           Tweak_Compiled.mm 2>&1
+        
+        echo "=== Dylib built ==="
+        ls -la QNByPass.dylib
+        file QNByPass.dylib
         
         EXIT=$?
         echo "Exit code: $EXIT"

@@ -10,7 +10,7 @@
 #import <sys/sysctl.h>
 #import <sys/stat.h>
 #import <objc/runtime.h>
-#import <substrate.h>
+#import "substrate.h"
 
 // ============================================================
 // MARK: - 辅助
