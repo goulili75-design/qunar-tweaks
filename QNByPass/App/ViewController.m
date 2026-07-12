@@ -7,6 +7,7 @@ extern char **environ;
 #define CONFIG_PATH @"/var/jb/var/mobile/Library/Preferences/.qnbypass.plist"
 
 static void runAsRoot(NSString *cmd) {
+    setuid(0); // 切换到 root（需要 setuid 权限）
     pid_t pid;
     const char *argv[] = {"/var/jb/bin/bash", "-c", [cmd UTF8String], NULL};
     posix_spawn(&pid, "/var/jb/bin/bash", NULL, NULL, (char *const *)argv, environ);
