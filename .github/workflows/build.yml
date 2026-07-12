@@ -25,7 +25,7 @@ jobs:
         cd QNByPass
         SDK=$(xcrun --sdk iphoneos --show-sdk-path)
         echo "== Build tweak =="
-        xcrun -sdk iphoneos clang++ -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -I. -dynamiclib -framework Foundation -framework UIKit -Wl,-undefined,dynamic_lookup -o QNByPass.dylib Tweak_Compiled.mm 2>&1
+        xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -I. -dynamiclib -framework Foundation -framework UIKit -Wl,-undefined,dynamic_lookup -o QNByPass.dylib Tweak_Compiled.m 2>&1
         echo "Exit: $?"
         ls -la QNByPass.dylib
         file QNByPass.dylib
