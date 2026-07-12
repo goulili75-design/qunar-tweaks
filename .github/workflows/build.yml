@@ -1,4 +1,4 @@
-name: Build QNByPass Tweak
+name: Build QNByPass DEB
 on:
   push:
     branches: [main, master]
@@ -11,29 +11,76 @@ jobs:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Build Test
+    
+    - name: Build Tweak Dylib
       run: |
         cd QNByPass
         SDK=$(xcrun --sdk iphoneos --show-sdk-path)
-        echo "SDK: $SDK"
-        echo "== Test compile =="
-        xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -dynamiclib -framework Foundation -o test.dylib test.m 2>&1
-        echo "Exit: $?"
-        ls -la test.dylib
-    - name: Build Tweak
-      run: |
-        cd QNByPass
-        SDK=$(xcrun --sdk iphoneos --show-sdk-path)
-        echo "== Build tweak =="
-        xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -I. -dynamiclib -framework Foundation -framework UIKit -Wl,-undefined,dynamic_lookup -o QNByPass.dylib Tweak_Compiled.m 2>&1
-        echo "Exit: $?"
+        xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -I. -dynamiclib -framework Foundation -framework UIKit -Wl,-undefined,dynamic_lookup -o QNByPass.dylib Tweak.m
         ls -la QNByPass.dylib
-        file QNByPass.dylib
+        echo "Tweak built OK"
+    
+    - name: Build App
+      run: |
+        cd QNByPass/App
+        SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+        xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -framework UIKit -framework Foundation -o QNByPass main.m AppDelegate.m ViewController.m
+        ls -la QNByPass
+        echo "App built OK"
+    
+    - name: Package DEB
+      run: |
+        cd QNByPass
+        mkdir -p deb/DEBIAN
+        mkdir -p deb/Applications/QNByPass.app
+        mkdir -p deb/Library/MobileSubstrate/DynamicLibraries
+        
+        # Copy app
+        cp App/QNByPass deb/Applications/QNByPass.app/
+        cp App/Info.plist deb/Applications/QNByPass.app/
+        
+        # Copy tweak
+        cp QNByPass.dylib deb/Library/MobileSubstrate/DynamicLibraries/
+        cat > deb/Library/MobileSubstrate/DynamicLibraries/QNByPass.plist << 'PLIST'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0"><dict><key>Filter</key><dict><key>Bundles</key><array><string>com.qunar.iphoneclient</string></array></dict></dict></plist>
+        PLIST
+        
+        # DEBIAN control
+        cat > deb/DEBIAN/control << 'CTL'
+        Package: com.yourcompany.qnbypass
+        Name: QNByPass
+        Version: 1.0.0
+        Architecture: iphoneos-arm64
+        Description: Qunar jailbreak bypass + device spoofing
+        Maintainer: goulili75
+        Author: goulili75
+        Section: Tweaks
+        Depends: mobilesubstrate
+        CTL
+        
+        # Post install
+        cat > deb/DEBIAN/postinst << 'POST'
+        #!/bin/sh
+        chmod +x /Applications/QNByPass.app/QNByPass
+        uicache -p /Applications/QNByPass.app
+        killall -9 SpringBoard 2>/dev/null || true
+        POST
+        chmod +x deb/DEBIAN/postinst
+        
+        # Build DEB
+        dpkg-deb -Zgzip -b deb packages/com.yourcompany.qnbypass_1.0.0_iphoneos-arm64.deb 2>&1 || {
+          echo "dpkg-deb failed, trying tar.gz..."
+          tar czf packages/QNByPass_1.0.0.tar.gz -C deb .
+        }
+        
+        echo "=== Package ==="
+        ls -la packages/
+    
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: QNByPass
-        path: |
-          QNByPass/QNByPass.dylib
-          QNByPass/layout/Library/MobileSubstrate/DynamicLibraries/QNByPass.plist
+        name: QNByPass-DEB
+        path: QNByPass/packages/*
         retention-days: 30
