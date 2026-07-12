@@ -15,8 +15,11 @@ jobs:
       run: |
         cd QNByPass
         SDK=$(xcrun --sdk iphoneos --show-sdk-path)
-        xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -I. -dynamiclib -framework Foundation -framework UIKit -Wl,-undefined,dynamic_lookup -o QNByPass.dylib Tweak_Compiled.m
+        xcrun -sdk iphoneos clang -arch arm64 -arch arm64e -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -I. -dynamiclib -framework Foundation -framework UIKit -Wl,-undefined,dynamic_lookup -o QNByPass.dylib Tweak_Compiled.m
         ls -la QNByPass.dylib
+        # 伪签名（Dopamine 必须）
+        brew install ldid 2>/dev/null || true
+        ldid -S QNByPass.dylib 2>/dev/null || codesign -s - -f QNByPass.dylib 2>/dev/null || echo "Signing skipped"
     - name: Package DEB
       run: |
         cd QNByPass
