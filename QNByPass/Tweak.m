@@ -46,13 +46,9 @@ static int hook_sbn(const char *n, void *o, size_t *ol, void *nw, size_t nl) {
 static pid_t (*orig_f)(void);
 static pid_t hook_f(void) { errno = EPERM; return -1; }
 
-// 改机：IDFV/名称/型号伪装
+// 改机：IDFV伪装
 static NSUUID *(*orig_idfv)(id, SEL);
 static NSUUID *hook_idfv(id s, SEL c) { return [[NSUUID alloc] initWithUUIDString:@"E621E1F8-C36C-495A-93FC-0C247A3E6E5F"]; }
-static NSString *(*orig_devName)(id, SEL);
-static NSString *hook_devName(id s, SEL c) { return @"iPhone"; }
-static NSString *(*orig_devModel)(id, SEL);
-static NSString *hook_devModel(id s, SEL c) { return @"iPhone"; }
 
 __attribute__((constructor))
 static void qnbypass_init(void) {
@@ -73,10 +69,8 @@ static void qnbypass_init(void) {
             Method m = class_getInstanceMethod(c, sl[i]);
             if (m) class_replaceMethod(c, sl[i], (IMP)hookNo, method_getTypeEncoding(m));
         }
-        // 改机 Hook
+        // 改机 Hook (仅IDFV)
         MSHookMessageEx(c, @selector(identifierForVendor), (IMP)hook_idfv, (IMP*)&orig_idfv);
-        MSHookMessageEx(c, @selector(name), (IMP)hook_devName, (IMP*)&orig_devName);
-        MSHookMessageEx(c, @selector(model), (IMP)hook_devModel, (IMP*)&orig_devModel);
     }
     
     // NSFileManager
