@@ -88,24 +88,38 @@ static void runAsRoot(NSString *cmd) {
     [self showAlert:@"✅ 改机完成！" msg:[NSString stringWithFormat:@"伪装型号: %@\n请打开去哪儿测试", m]];
 }
 
-// 全部清除（只清除去哪儿，不动其他App）
+// 全部清除（彻底版：杀进程 + 清容器 + AppGroup + 钥匙串）
 - (void)clearAll {
     NSString *cmd = 
-        @"QUNAR='com.qunar.iphoneclient'; "
-        @"for BASE in /var/jb/var/mobile/Containers/Data/Application /var/mobile/Containers/Data/Application; do "
-        @"  for DIR in $BASE/*; do "
-        @"    PLIST=\"$DIR/.com.apple.mobile_container_manager.metadata.plist\"; "
-        @"    if [ -f \"$PLIST\" ] && plutil -p \"$PLIST\" 2>/dev/null | grep -q \"$QUNAR\"; then "
-        @"      echo \"Found Qunar: $DIR\"; "
-        @"      rm -rf \"$DIR\"/Library/Caches \"$DIR\"/Library/Cookies \"$DIR\"/Library/Preferences \"$DIR\"/Documents \"$DIR\"/tmp 2>/dev/null; "
-        @"      echo \"Cleared $DIR\"; "
-        @"    fi; "
+        @"Q='com.qunar.iphoneclient'; "
+        // 1. 杀 App
+        @"killall -9 QunariPhone_Cook_CM 2>/dev/null; sleep 1; "
+        // 2. 清除主容器
+        @"for B in /var/jb/var/mobile/Containers/Data/Application /var/mobile/Containers/Data/Application; do "
+        @"  for D in $B/*; do "
+        @"    P=\"$D/.com.apple.mobile_container_manager.metadata.plist\"; "
+        @"    [ -f \"$P\" ] && plutil -p \"$P\" 2>/dev/null | grep -q \"$Q\" && rm -rf \"$D\" && echo \"Cleared: $D\"; "
         @"  done; "
         @"done; "
-        @"rm -f /var/jb/var/Keychains/keychain-2.db* 2>/dev/null; "
-        @"rm -f /var/Keychains/keychain-2.db* 2>/dev/null; "
+        // 3. 清除 App Group 共享容器
+        @"for B in /var/jb/var/mobile/Containers/Shared/AppGroup /var/mobile/Containers/Shared/AppGroup; do "
+        @"  for D in $B/*; do "
+        @"    P=\"$D/.com.apple.mobile_container_manager.metadata.plist\"; "
+        @"    [ -f \"$P\" ] && plutil -p \"$P\" 2>/dev/null | grep -qi 'qunar\\|Qunar' && rm -rf \"$D\" && echo \"Cleared AppGroup: $D\"; "
+        @"  done; "
+        @"done; "
+        // 4. 清除 installd 缓存
+        @"rm -rf /var/jb/var/installd/Library/Caches/*qunar* /var/jb/var/installd/Library/Caches/*Qunar* 2>/dev/null; "
+        // 5. 清除 iTunes 元数据
+        @"rm -f /var/jb/var/mobile/Library/Preferences/com.apple.itunesstored.plist 2>/dev/null; "
+        // 6. 钥匙串彻底清除
+        @"killall -9 securityd 2>/dev/null; "
+        @"rm -f /var/jb/var/Keychains/keychain-2.db /var/jb/var/Keychains/keychain-2.db-shm /var/jb/var/Keychains/keychain-2.db-wal 2>/dev/null; "
+        @"rm -f /var/Keychains/keychain-2.db /var/Keychains/keychain-2.db-shm /var/Keychains/keychain-2.db-wal 2>/dev/null; "
+        // 7. 重建 keychain
+        @"mkdir -p /var/jb/var/Keychains 2>/dev/null; "
         @"echo 'Done'";
     runAsRoot(cmd);
-    [self showAlert:@"✅ 已清除" msg:@"只清除了去哪儿App的数据+钥匙串\n其他App不受影响"];
+    [self showAlert:@"✅ 彻底清除完成" msg:@"App容器+AppGroup+Keychain\n全部清除，无残留"];
 }
 @end
