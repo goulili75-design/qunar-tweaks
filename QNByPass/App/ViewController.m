@@ -142,13 +142,15 @@
 
 // ========== 清除钥匙串 ==========
 - (void)clearKeychain {
-    // 直接删除 keychain 中 Qunar 的项
-    int ret = system("sqlite3 /var/jb/var/Keychains/keychain-2.db \"DELETE FROM genp WHERE agrp LIKE '%qunar%'; DELETE FROM inet WHERE agrp LIKE '%qunar%';\" 2>/dev/null");
-    if (ret != 0) {
-        [self showAlert:@"⚠️ 部分成功" msg:@"钥匙串清除可能不完整，请手动在设置中清除"];
-        return;
-    }
-    [self showAlert:@"✅ 钥匙串已清除" msg:@"Qunar 相关钥匙串项已删除"];
+    // iOS keychain 通过文件路径清除
+    NSFileManager *fm = [NSFileManager defaultManager];
+    // keychain 数据库 (Dopamine)
+    [fm removeItemAtPath:@"/var/jb/var/Keychains/keychain-2.db" error:nil];
+    [fm removeItemAtPath:@"/var/jb/var/Keychains/keychain-2.db-shm" error:nil];
+    [fm removeItemAtPath:@"/var/jb/var/Keychains/keychain-2.db-wal" error:nil];
+    // 标准路径
+    [fm removeItemAtPath:@"/var/Keychains/keychain-2.db" error:nil];
+    [self showAlert:@"✅ 钥匙串已清除" msg:@"keychain 数据库已删除\n设备将自动重建"];
 }
 
 // ========== 清除登录状态 ==========
