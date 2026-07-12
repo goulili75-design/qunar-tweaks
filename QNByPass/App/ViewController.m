@@ -1,77 +1,65 @@
-// ViewController.m - 改机主界面
+// ViewController.m - 改机主界面 (root清除版)
 #import "ViewController.h"
 #import <stdlib.h>
+#import <spawn.h>
 
+extern char **environ;
 #define CONFIG_PATH @"/var/jb/var/mobile/Library/Preferences/.qnbypass.plist"
-#define QUNAR_BUNDLE @"com.qunar.iphoneclient"
+
+static void runAsRoot(NSString *cmd) {
+    pid_t pid;
+    const char *argv[] = {"/var/jb/bin/bash", "-c", [cmd UTF8String], NULL};
+    posix_spawn(&pid, "/var/jb/bin/bash", NULL, NULL, (char *const *)argv, environ);
+    waitpid(pid, NULL, 0);
+}
 
 @implementation ViewController {
     UILabel *statusLabel;
-    UIButton *modBtn, *clearBtn, *keychainBtn, *loginBtn;
-    NSString *selectedBundle;
+    UIButton *modBtn;
 }
 
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.view.backgroundColor = [UIColor systemBackgroundColor];
     self.title = @"QNByPass 改机";
-    selectedBundle = QUNAR_BUNDLE;
     
-    UIScrollView *sv = [[UIScrollView alloc] initWithFrame:self.view.bounds];
-    sv.contentSize = CGSizeMake(self.view.bounds.size.width, 750);
-    [self.view addSubview:sv];
+    CGFloat y = 80, w = self.view.bounds.size.width - 40;
     
-    CGFloat y = 30, w = self.view.bounds.size.width - 40, x = 20;
-    
-    // 标题
-    UILabel *t = [[UILabel alloc] initWithFrame:CGRectMake(x, y, w, 30)];
+    UILabel *t = [[UILabel alloc] initWithFrame:CGRectMake(20, y, w, 30)];
     t.text = @"去哪儿一键改机"; t.font = [UIFont boldSystemFontOfSize:22]; t.textAlignment = NSTextAlignmentCenter;
-    [sv addSubview:t]; y += 40;
+    [self.view addSubview:t]; y += 40;
     
-    // 状态
-    statusLabel = [[UILabel alloc] initWithFrame:CGRectMake(x, y, w, 50)];
-    statusLabel.text = @"⚠️ 状态：未激活"; statusLabel.numberOfLines = 2;
-    statusLabel.textAlignment = NSTextAlignmentCenter; statusLabel.textColor = [UIColor orangeColor];
-    [sv addSubview:statusLabel]; y += 55;
+    statusLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, y, w, 40)];
+    statusLabel.text = @"⚠️ 状态：未激活"; statusLabel.textAlignment = NSTextAlignmentCenter;
+    statusLabel.textColor = [UIColor orangeColor]; [self.view addSubview:statusLabel]; y += 50;
     
-    // 一键改机
-    modBtn = [self makeBtn:@"⚡ 一键改机（激活越狱屏蔽+设备伪装）" y:y color:[UIColor systemGreenColor] action:@selector(doModify)];
-    [sv addSubview:modBtn]; y += 70;
+    // 清除数据
+    UIButton *b1 = [self btn:CGRectMake(20,y,w,48) title:@"🗑 清除 App 全部数据（缓存/登录/钥匙串）" color:[UIColor systemRedColor] sel:@selector(clearAll)];
+    [self.view addSubview:b1]; y += 58;
     
-    // 清除 App 数据
-    clearBtn = [self makeBtn:@"🗑 清除去哪儿全部数据" y:y color:[UIColor systemRedColor] action:@selector(clearAppData)];
-    [sv addSubview:clearBtn]; y += 70;
+    // 改机
+    modBtn = [self btn:CGRectMake(20,y,w,48) title:@"⚡ 一键改机" color:[UIColor systemGreenColor] sel:@selector(doModify)];
+    [self.view addSubview:modBtn]; y += 65;
     
-    // 清除钥匙串
-    keychainBtn = [self makeBtn:@"🔑 清除钥匙串" y:y color:[UIColor systemOrangeColor] action:@selector(clearKeychain)];
-    [sv addSubview:keychainBtn]; y += 70;
-    
-    // 清除登录状态
-    loginBtn = [self makeBtn:@"🚪 清除登录状态（仅Cookie/Token）" y:y color:[UIColor systemBlueColor] action:@selector(clearLogin)];
-    [sv addSubview:loginBtn]; y += 80;
-    
-    // 说明
-    UILabel *info = [[UILabel alloc] initWithFrame:CGRectMake(x, y, w, 120)];
-    info.text = @"操作步骤：\n① 先点「清除全部数据」+「清除钥匙串」\n② 再点「一键改机」\n③ 打开去哪儿重新登录测试";
-    info.numberOfLines = 0; info.font = [UIFont systemFontOfSize:12]; info.textColor = [UIColor grayColor];
-    [sv addSubview:info];
+    UILabel *info = [[UILabel alloc] initWithFrame:CGRectMake(20, y, w, 80)];
+    info.text = @"步骤：① 先清除数据 → ② 一键改机 → ③ 打开去哪儿"; info.numberOfLines = 0;
+    info.font = [UIFont systemFontOfSize:12]; info.textColor = [UIColor grayColor]; info.textAlignment = NSTextAlignmentCenter;
+    [self.view addSubview:info];
     
     [self refreshStatus];
 }
 
-- (UIButton *)makeBtn:(NSString *)title y:(CGFloat)y color:(UIColor *)c action:(SEL)sel {
+- (UIButton *)btn:(CGRect)frame title:(NSString *)t color:(UIColor *)c sel:(SEL)s {
     UIButton *b = [UIButton buttonWithType:UIButtonTypeSystem];
-    b.frame = CGRectMake(20, y, self.view.bounds.size.width - 40, 50);
-    [b setTitle:title forState:UIControlStateNormal];
-    b.titleLabel.font = [UIFont systemFontOfSize:15]; b.titleLabel.numberOfLines = 2;
-    b.titleLabel.textAlignment = NSTextAlignmentCenter;
-    b.backgroundColor = c; [b setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-    b.layer.cornerRadius = 12; [b addTarget:self action:sel forControlEvents:UIControlEventTouchUpInside];
+    b.frame = frame; [b setTitle:t forState:UIControlStateNormal];
+    b.titleLabel.font = [UIFont systemFontOfSize:15]; b.backgroundColor = c;
+    [b setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    b.layer.cornerRadius = 10; [b addTarget:self action:s forControlEvents:UIControlEventTouchUpInside];
     return b;
 }
 
-- (void)showAlert:(NSString *)title msg:(NSString *)msg {
-    UIAlertController *a = [UIAlertController alertControllerWithTitle:title message:msg preferredStyle:UIAlertControllerStyleAlert];
+- (void)showAlert:(NSString *)t msg:(NSString *)m {
+    UIAlertController *a = [UIAlertController alertControllerWithTitle:t message:m preferredStyle:UIAlertControllerStyleAlert];
     [a addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:nil]];
     [self presentViewController:a animated:YES completion:nil];
 }
@@ -81,97 +69,40 @@
     return d ?: [NSMutableDictionary dictionary];
 }
 - (void)saveConfig:(NSDictionary *)dict {
-    // 确保目录存在
     [[NSFileManager defaultManager] createDirectoryAtPath:@"/var/jb/var/mobile/Library/Preferences" withIntermediateDirectories:YES attributes:nil error:nil];
     [dict writeToFile:CONFIG_PATH atomically:YES];
 }
 - (void)refreshStatus {
-    NSDictionary *cfg = [self loadConfig];
-    BOOL en = [cfg[@"enabled"] boolValue];
-    statusLabel.text = en ? @"✅ 状态：已激活\n越狱屏蔽+设备伪装生效中" : @"⚠️ 状态：未激活\n请先清除数据再改机";
+    BOOL en = [[self loadConfig][@"enabled"] boolValue];
+    statusLabel.text = en ? @"✅ 已激活" : @"⚠️ 未激活";
     statusLabel.textColor = en ? [UIColor systemGreenColor] : [UIColor orangeColor];
-    [modBtn setTitle:en ? @"🔄 重新改机" : @"⚡ 一键改机（激活越狱屏蔽+设备伪装）" forState:UIControlStateNormal];
+    [modBtn setTitle:en ? @"🔄 重新改机" : @"⚡ 一键改机" forState:UIControlStateNormal];
 }
 
-// ========== 一键改机 ==========
 - (void)doModify {
-    NSArray *models = @[@"iPhone14,4", @"iPhone14,5", @"iPhone14,2", @"iPhone14,3", @"iPhone13,2", @"iPhone13,3"];
-    NSString *m = models[arc4random_uniform((uint32_t)models.count)];
-    NSDictionary *cfg = @{
-        @"enabled": @YES, @"bundle": selectedBundle,
-        @"idfv": [[NSUUID UUID] UUIDString],
-        @"hwMachine": m, @"deviceName": @"iPhone", @"model": @"iPhone",
-        @"updatedAt": [NSDate date]
-    };
-    [self saveConfig:cfg]; [self refreshStatus];
-    [self showAlert:@"✅ 改机完成！" msg:[NSString stringWithFormat:@"伪装型号: %@\n请打开去哪儿App测试", m]];
+    NSArray *mList = @[@"iPhone14,4",@"iPhone14,5",@"iPhone14,2",@"iPhone14,3",@"iPhone13,2",@"iPhone13,3"];
+    NSString *m = mList[arc4random_uniform((uint32_t)mList.count)];
+    [self saveConfig:@{@"enabled":@YES,@"hwMachine":m,@"idfv":[[NSUUID UUID] UUIDString],@"updatedAt":[NSDate date]}];
+    [self refreshStatus];
+    [self showAlert:@"✅ 改机完成！" msg:[NSString stringWithFormat:@"伪装型号: %@\n请打开去哪儿测试", m]];
 }
 
-// ========== 清除 App 全部数据 ==========
-- (void)clearAppData {
-    // 找到去哪儿沙盒目录并删除
-    NSString *base = @"/var/jb/var/mobile/Containers/Data/Application";
-    NSFileManager *fm = [NSFileManager defaultManager];
-    NSArray *apps = [fm contentsOfDirectoryAtPath:base error:nil];
-    int deleted = 0;
-    for (NSString *uuid in apps) {
-        NSString *plist = [base stringByAppendingPathComponent:[NSString stringWithFormat:@"%@/.com.apple.mobile_container_manager.metadata.plist", uuid]];
-        NSDictionary *meta = [NSDictionary dictionaryWithContentsOfFile:plist];
-        if ([meta[@"MCMMetadataIdentifier"] isEqualToString:QUNAR_BUNDLE]) {
-            NSString *path = [base stringByAppendingPathComponent:uuid];
-            // 删除 Library, Documents, tmp
-            for (NSString *sub in @[@"Library", @"Documents", @"tmp"]) {
-                NSString *p = [path stringByAppendingPathComponent:sub];
-                [fm removeItemAtPath:p error:nil];
-            }
-            deleted++;
-        }
-    }
-    if (deleted == 0) {
-        // 备选：直接杀目录
-        for (NSString *uuid in apps) {
-            NSString *path = [base stringByAppendingPathComponent:uuid];
-            BOOL isDir;
-            [fm fileExistsAtPath:path isDirectory:&isDir];
-            if (isDir && [fm fileExistsAtPath:[path stringByAppendingPathComponent:@"Library/Preferences/com.qunar.iphoneclient.plist"]]) {
-                for (NSString *sub in @[@"Library", @"Documents", @"tmp"]) {
-                    [fm removeItemAtPath:[path stringByAppendingPathComponent:sub] error:nil];
-                }
-                deleted++;
-            }
-        }
-    }
-    [self showAlert:@"✅ 数据清除完成" msg:[NSString stringWithFormat:@"已清除 %d 个数据目录", deleted]];
-}
-
-// ========== 清除钥匙串 ==========
-- (void)clearKeychain {
-    // iOS keychain 通过文件路径清除
-    NSFileManager *fm = [NSFileManager defaultManager];
-    // keychain 数据库 (Dopamine)
-    [fm removeItemAtPath:@"/var/jb/var/Keychains/keychain-2.db" error:nil];
-    [fm removeItemAtPath:@"/var/jb/var/Keychains/keychain-2.db-shm" error:nil];
-    [fm removeItemAtPath:@"/var/jb/var/Keychains/keychain-2.db-wal" error:nil];
-    // 标准路径
-    [fm removeItemAtPath:@"/var/Keychains/keychain-2.db" error:nil];
-    [self showAlert:@"✅ 钥匙串已清除" msg:@"keychain 数据库已删除\n设备将自动重建"];
-}
-
-// ========== 清除登录状态 ==========
-- (void)clearLogin {
-    NSFileManager *fm = [NSFileManager defaultManager];
-    NSString *base = @"/var/jb/var/mobile/Containers/Data/Application";
-    for (NSString *uuid in [fm contentsOfDirectoryAtPath:base error:nil]) {
-        NSString *path = [base stringByAppendingPathComponent:uuid];
-        // 删 Cookies
-        [fm removeItemAtPath:[path stringByAppendingPathComponent:@"Library/Cookies"] error:nil];
-        // 删 HTTP 缓存
-        [fm removeItemAtPath:[path stringByAppendingPathComponent:@"Library/Caches/com.qunar.iphoneclient"] error:nil];
-        // 删 Preferences（仅 Qunar）
-        [fm removeItemAtPath:[path stringByAppendingPathComponent:@"Library/Preferences/com.qunar.iphoneclient.plist"] error:nil];
-        // 删 Keychain 访问组
-        [fm removeItemAtPath:[path stringByAppendingPathComponent:@"Library/Preferences/.GlobalPreferences.plist"] error:nil];
-    }
-    [self showAlert:@"✅ 登录状态已清除" msg:@"Cookie/Token/Preferences 已删除\n请重新登录"];
+// 全部清除（合并清除数据+钥匙串+登录状态，root执行）
+- (void)clearAll {
+    runAsRoot(
+        @"rm -rf /var/jb/var/mobile/Containers/Data/Application/*/Library/Caches/*qunar* 2>/dev/null; "
+        @"rm -rf /var/jb/var/mobile/Containers/Data/Application/*/Library/Cookies 2>/dev/null; "
+        @"rm -rf /var/jb/var/mobile/Containers/Data/Application/*/Library/Preferences/*qunar* 2>/dev/null; "
+        @"rm -rf /var/jb/var/mobile/Containers/Data/Application/*/Documents 2>/dev/null; "
+        @"rm -rf /var/jb/var/mobile/Containers/Data/Application/*/tmp 2>/dev/null; "
+        @"rm -rf /var/mobile/Containers/Data/Application/*/Library/Caches/*qunar* 2>/dev/null; "
+        @"rm -rf /var/mobile/Containers/Data/Application/*/Library/Cookies 2>/dev/null; "
+        @"rm -rf /var/mobile/Containers/Data/Application/*/Library/Preferences/*qunar* 2>/dev/null; "
+        @"rm -rf /var/mobile/Containers/Data/Application/*/Documents 2>/dev/null; "
+        @"rm -rf /var/mobile/Containers/Data/Application/*/tmp 2>/dev/null; "
+        @"rm -f /var/jb/var/Keychains/keychain-2.db* 2>/dev/null; "
+        @"rm -f /var/Keychains/keychain-2.db* 2>/dev/null"
+    );
+    [self showAlert:@"✅ 全部清除完成" msg:@"App数据 + 登录状态 + 钥匙串\n已全部删除\n请重新打开去哪儿"];
 }
 @end
