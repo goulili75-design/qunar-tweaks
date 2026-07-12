@@ -11,73 +11,44 @@ jobs:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Build Tweak Dylib
+    - name: Build Tweak
       run: |
         cd QNByPass
         SDK=$(xcrun --sdk iphoneos --show-sdk-path)
         xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -I. -dynamiclib -framework Foundation -framework UIKit -Wl,-undefined,dynamic_lookup -o QNByPass.dylib Tweak_Compiled.m
         ls -la QNByPass.dylib
-        echo "Tweak built OK"
-    
-    - name: Build App
-      run: |
-        cd QNByPass/App
-        SDK=$(xcrun --sdk iphoneos --show-sdk-path)
-        xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -framework UIKit -framework Foundation -o QNByPass main.m AppDelegate.m ViewController.m
-        ls -la QNByPass
-        echo "App built OK"
-    
     - name: Package DEB
       run: |
         cd QNByPass
         mkdir -p deb/DEBIAN
-        mkdir -p deb/Applications/QNByPass.app
         mkdir -p deb/Library/MobileSubstrate/DynamicLibraries
-        
-        # Copy app
-        cp App/QNByPass deb/Applications/QNByPass.app/
-        cp App/Info.plist deb/Applications/QNByPass.app/
-        
-        # Copy tweak
         cp QNByPass.dylib deb/Library/MobileSubstrate/DynamicLibraries/
-        cat > deb/Library/MobileSubstrate/DynamicLibraries/QNByPass.plist << 'PLIST'
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0"><dict><key>Filter</key><dict><key>Bundles</key><array><string>com.qunar.iphoneclient</string></array></dict></dict></plist>
-        PLIST
-        
-        # DEBIAN control
+        cp layout/Library/MobileSubstrate/DynamicLibraries/QNByPass.plist deb/Library/MobileSubstrate/DynamicLibraries/ 2>/dev/null || cat > deb/Library/MobileSubstrate/DynamicLibraries/QNByPass.plist << 'PL'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict><key>Filter</key><dict><key>Bundles</key><array><string>com.qunar.iphoneclient</string></array></dict></dict></plist>
+PL
         cat > deb/DEBIAN/control << 'CTL'
-        Package: com.yourcompany.qnbypass
-        Name: QNByPass
-        Version: 1.0.0
-        Architecture: iphoneos-arm64
-        Description: Qunar jailbreak bypass + device spoofing
-        Maintainer: goulili75
-        Author: goulili75
-        Section: Tweaks
-        Depends: mobilesubstrate
-        CTL
-        
-        # Post install
-        cat > deb/DEBIAN/postinst << 'POST'
-        #!/bin/sh
-        chmod +x /Applications/QNByPass.app/QNByPass
-        uicache -p /Applications/QNByPass.app
-        killall -9 SpringBoard 2>/dev/null || true
-        POST
+Package: com.yourcompany.qnbypass
+Name: QNByPass
+Version: 1.0.0
+Architecture: iphoneos-arm64
+Description: Qunar travel jailbreak bypass + device spoofing
+Maintainer: goulili75
+Author: goulili75
+Section: Tweaks
+Depends: mobilesubstrate
+CTL
+        cat > deb/DEBIAN/postinst << 'PI'
+#!/bin/sh
+killall -9 SpringBoard 2>/dev/null || true
+PI
         chmod +x deb/DEBIAN/postinst
-        
-        # Build DEB
+        mkdir -p packages
         dpkg-deb -Zgzip -b deb packages/com.yourcompany.qnbypass_1.0.0_iphoneos-arm64.deb 2>&1 || {
-          echo "dpkg-deb failed, trying tar.gz..."
-          tar czf packages/QNByPass_1.0.0.tar.gz -C deb .
+          echo "dpkg-deb failed, creating tar.gz"; tar czf packages/QNByPass.tar.gz -C deb .
         }
-        
-        echo "=== Package ==="
         ls -la packages/
-    
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
