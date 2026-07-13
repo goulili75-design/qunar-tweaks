@@ -15,7 +15,7 @@ jobs:
       run: |
         SDK=$(xcrun --sdk iphoneos --show-sdk-path)
         cd QNByPass/App
-        xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -fPIE -framework UIKit -framework Foundation -o QNByPass main.m AppDelegate.m ViewController.m
+        xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -fPIE -framework UIKit -framework Foundation -o QNByPass main.m
         ldid -Sentitlements.plist QNByPass 2>/dev/null || true
         mkdir -p QNByPass.app && cp QNByPass QNByPass.app/ && cp Info.plist QNByPass.app/ && cp entitlements.plist QNByPass.app/
         cd ..
