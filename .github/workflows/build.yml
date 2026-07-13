@@ -1,38 +1,69 @@
-name: Build QNByPass DEB
-on:
-  push:
-    branches: [main, master]
-  workflow_dispatch:
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+name: Build QNByPass
+on: [push, workflow_dispatch]
+concurrency: { group: ci-${{ github.ref }}, cancel-in-progress: true }
 jobs:
   build:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
+    - name: Setup App Project
+      run: |
+        cd QNByPass/App
+        # 创建最小 Xcode 项目
+        mkdir -p QNByPass.xcodeproj
+        cat > QNByPass.xcodeproj/project.pbxproj << 'XCODE'
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 56;
+	objects = {
+		A0001 = { isa = PBXBuildFile; fileRef = A0002; };
+		A0002 = { isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		A0003 = { isa = PBXGroup; children = (A0002,); sourceTree = "<group>"; };
+		A0004 = { isa = PBXNativeTarget; buildPhases = (A0005,); name = QNByPass; productName = QNByPass; productType = "com.apple.product-type.application"; };
+		A0005 = { isa = PBXSourcesBuildPhase; files = (A0001,); };
+		A0006 = { isa = PBXProject; buildConfigurationList = A0007; mainGroup = A0003; targets = (A0004,); };
+		A0007 = { isa = XCConfigurationList; buildConfigurations = (A0008,); };
+		A0008 = { isa = XCBuildConfiguration; buildSettings = {
+			PRODUCT_NAME = QNByPass;
+			PRODUCT_BUNDLE_IDENTIFIER = com.qnbypass.app;
+			INFOPLIST_FILE = Info.plist;
+			CODE_SIGN_IDENTITY = "-";
+			CODE_SIGNING_ALLOWED = NO;
+			IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+		}; name = Debug; };
+		rootObject = A0006;
+	};
+}
+XCODE
+        echo "Project created"
+    - name: Build App with xcodebuild
+      run: |
+        cd QNByPass/App
+        SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+        xcodebuild -project QNByPass.xcodeproj -scheme QNByPass -sdk iphoneos -configuration Debug -derivedDataPath build 2>&1 | tail -20 || true
+        # 找生成的 app
+        find build -name "*.app" -type d 2>/dev/null
+        # 如果用不了，fallback 到 clang
+        xcrun -sdk iphoneos clang -target arm64-apple-ios14.0 -isysroot "$SDK" -fobjc-arc -framework UIKit -framework Foundation -o QNByPass main.m 2>&1 && echo "CLANG OK"
     - name: Build Tweak
       run: |
         cd QNByPass
         SDK=$(xcrun --sdk iphoneos --show-sdk-path)
-        xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -I. -dynamiclib -framework Foundation -framework UIKit -Wl,-undefined,dynamic_lookup -o QNByPass.dylib Tweak_Compiled.m
+        xcrun -sdk iphoneos clang -target arm64-apple-ios14.0 -isysroot "$SDK" -fobjc-arc -I. -dynamiclib -framework Foundation -framework UIKit -Wl,-undefined,dynamic_lookup -o QNByPass.dylib Tweak_Compiled.m
         ldid -S QNByPass.dylib 2>/dev/null || true
-        echo "Tweak OK"
     - name: Package DEB
       run: |
         cd QNByPass
-        mkdir -p deb/DEBIAN deb/var/jb/Library/MobileSubstrate/DynamicLibraries deb/var/jb/usr/bin
+        mkdir -p deb/DEBIAN deb/var/jb/Library/MobileSubstrate/DynamicLibraries deb/var/jb/Applications/QNByPass.app
         cp QNByPass.dylib deb/var/jb/Library/MobileSubstrate/DynamicLibraries/
         cp filter.plist deb/var/jb/Library/MobileSubstrate/DynamicLibraries/QNByPass.plist
-        cp qnbypass.sh deb/var/jb/usr/bin/qnbypass && chmod +x deb/var/jb/usr/bin/qnbypass
-        printf 'Package: com.qnbypass.dopa\nName: QNByPass\nVersion: 4.0\nArchitecture: iphoneos-arm64\nDescription: Qunar bypass + device spoof\nMaintainer: goulili75\nSection: Tweaks\nDepends: mobilesubstrate\n' > deb/DEBIAN/control
-        printf '#!/bin/sh\nkillall -9 SpringBoard 2>/dev/null\n' > deb/DEBIAN/postinst && chmod 0755 deb/DEBIAN/postinst
-        brew install dpkg 2>/dev/null || true
+        [ -f App/QNByPass ] && { mkdir -p deb/var/jb/Applications/QNByPass.app; cp App/QNByPass deb/var/jb/Applications/QNByPass.app/; cp App/Info.plist deb/var/jb/Applications/QNByPass.app/; cp App/entitlements.plist deb/var/jb/Applications/QNByPass.app/; }
+        printf 'Package: com.qnbypass\nName: QNByPass\nVersion: 5.0\nArchitecture: iphoneos-arm64\nDescription: Qunar bypass\nMaintainer: goulili75\nSection: Tweaks\nDepends: mobilesubstrate\n' > deb/DEBIAN/control
+        printf '#!/bin/sh\n[ -f /var/jb/Applications/QNByPass.app/QNByPass ] && { chmod 755 /var/jb/Applications/QNByPass.app/QNByPass; ldid -S/var/jb/Applications/QNByPass.app/entitlements.plist /var/jb/Applications/QNByPass.app/QNByPass 2>/dev/null; uicache -p /var/jb/Applications/QNByPass.app 2>/dev/null; }\nkillall -9 SpringBoard 2>/dev/null\n' > deb/DEBIAN/postinst && chmod 0755 deb/DEBIAN/postinst
         mkdir -p packages
-        (command -v dpkg-deb && dpkg-deb -Zgzip -b deb packages/com.qnbypass_4.0.deb) || tar czf packages/QNByPass.tar.gz -C deb .
+        (brew install dpkg 2>/dev/null; command -v dpkg-deb && dpkg-deb -Zgzip -b deb packages/com.qnbypass_5.0.deb) || tar czf packages/QNByPass.tar.gz -C deb .
         ls -la packages/
     - uses: actions/upload-artifact@v4
-      with:
-        name: QNByPass-DEB
-        path: QNByPass/packages/*
-        retention-days: 30
+      with: { name: QNByPass-DEB, path: QNByPass/packages/*, retention-days: 30 }
