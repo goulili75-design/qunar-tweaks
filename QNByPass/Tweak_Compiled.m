@@ -34,17 +34,29 @@ static int hook_sbn(const char *n, void *o, size_t *ol, void *nw, size_t nl) {
     }
     return orig_sbn(n, o, ol, nw, nl);
 }
-// 文件检测
+// 文件检测——拦截所有越狱 App 路径
 static BOOL (*orig_fep)(id, SEL, NSString *);
 static BOOL hook_fep(id s, SEL c, NSString *p) {
-    if (p && ([p hasPrefix:@"/var/jb"] || [p containsString:@"Cydia.app"] || [p containsString:@"Sileo.app"])) return NO;
+    if (p) {
+        if ([p hasPrefix:@"/var/jb"]) return NO;
+        if ([p containsString:@"Cydia.app"] || [p containsString:@"Sileo.app"] ||
+            [p containsString:@"Dopamine.app"] || [p containsString:@"Zebra.app"] ||
+            [p containsString:@"Filza.app"] || [p containsString:@"TrollStore.app"] ||
+            [p containsString:@"Activator.app"] || [p containsString:@"iCleaner.app"] ||
+            [p containsString:@"NewTerm.app"] || [p containsString:@"Santander.app"])
+            return NO;
+    }
     return orig_fep(s, c, p);
 }
-// URL Scheme
+// URL Scheme 检测——防 Qunar 扫描所有越狱 App
 static BOOL (*orig_co)(id, SEL, NSURL *);
 static BOOL hook_co(id s, SEL c, NSURL *u) {
     NSString *l = u.absoluteString.lowercaseString;
-    if ([l hasPrefix:@"sileo:"] || [l hasPrefix:@"cydia:"] || [l hasPrefix:@"dopamine:"]) return NO;
+    if ([l hasPrefix:@"sileo:"] || [l hasPrefix:@"cydia:"] || [l hasPrefix:@"dopamine:"] ||
+        [l hasPrefix:@"zbra:"] || [l hasPrefix:@"undecimus:"] || [l hasPrefix:@"filza:"] ||
+        [l hasPrefix:@"activator:"] || [l hasPrefix:@"jbroot:"] || [l hasPrefix:@"apt-repo:"] ||
+        [l hasPrefix:@"xina:"] || [l hasPrefix:@"postbox:"] || [l hasPrefix:@"icleaner:"] ||
+        [l hasPrefix:@"santander:"] || [l hasPrefix:@"ssh:"]) return NO;
     return orig_co(s, c, u);
 }
 // 环境变量
