@@ -25,7 +25,7 @@ jobs:
         mkdir -p deb/DEBIAN deb/var/jb/Library/MobileSubstrate/DynamicLibraries
         cp QNByPass.dylib deb/var/jb/Library/MobileSubstrate/DynamicLibraries/
         cp filter.plist deb/var/jb/Library/MobileSubstrate/DynamicLibraries/QNByPass.plist
-        printf 'Package: com.qnbypass\nName: QNByPass\nVersion: 9.0\nArchitecture: iphoneos-arm64e\nDescription: Qunar bypass for Dopamine\nMaintainer: goulili75\nSection: Tweaks\nDepends: mobilesubstrate\n' > deb/DEBIAN/control
+        printf 'Package: com.qnbypass\nName: QNByPass\nVersion: 9.1\nArchitecture: iphoneos-arm64\nDescription: Qunar bypass for Dopamine\nMaintainer: goulili75\nSection: Tweaks\nDepends: mobilesubstrate\n' > deb/DEBIAN/control
         printf '#!/bin/sh\nkillall -9 SpringBoard 2>/dev/null\n' > deb/DEBIAN/postinst && chmod 0755 deb/DEBIAN/postinst
         brew install dpkg 2>/dev/null || true
         mkdir -p packages
