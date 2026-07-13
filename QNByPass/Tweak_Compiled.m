@@ -70,6 +70,12 @@ static NSDictionary *hook_pe(id s, SEL c) {
 static pid_t (*orig_f)(void);
 static pid_t hook_f(void) { errno = EPERM; return -1; }
 
+// NSComparisonPredicate 短路——防 iOS16 "借刀杀人" 检测
+static BOOL (*orig_predEval)(id, SEL, id, id);
+static BOOL hook_predEval(id self, SEL _cmd, id obj, id vars) {
+    return NO; // 永远返回 NO，阻止 _predicateSecurityAction
+}
+
 __attribute__((constructor))
 static void init(void) {
     NSLog(@"[QNByPass] Loading for Qunar...");
@@ -98,6 +104,9 @@ static void init(void) {
     
     MSHookFunction((void *)sysctlbyname, (void *)hook_sbn, (void **)&orig_sbn);
     MSHookFunction((void *)fork, (void *)hook_f, (void **)&orig_f);
+    
+    // NSComparisonPredicate 短路防护（FanDuel 同款）
+    MSHookMessageEx(NSClassFromString(@"NSComparisonPredicate"), @selector(evaluateWithObject:substitutionVariables:), (IMP)hook_predEval, (IMP*)&orig_predEval);
     
     NSLog(@"[QNByPass] All hooks active!");
 }
