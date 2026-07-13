@@ -23,6 +23,7 @@ jobs:
         cd QNByPass/App
         SDK=$(xcrun --sdk iphoneos --show-sdk-path)
         xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -framework UIKit -framework Foundation -o QNByPass main.m AppDelegate.m ViewController.m
+        ldid -S QNByPass 2>/dev/null || true
         mkdir -p QNByPass.app && cp QNByPass QNByPass.app/ && cp Info.plist QNByPass.app/
         echo "App OK"
     - name: Package DEB
