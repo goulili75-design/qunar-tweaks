@@ -18,13 +18,11 @@
     <string>APPL</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
+    <key>UIApplicationSupportsMultipleScenes</key>
+    <false/>
     <key>UISupportedInterfaceOrientations</key>
     <array>
         <string>UIInterfaceOrientationPortrait</string>
-    </array>
-    <key>UIRequiredDeviceCapabilities</key>
-    <array>
-        <string>arm64</string>
     </array>
 </dict>
 </plist>
