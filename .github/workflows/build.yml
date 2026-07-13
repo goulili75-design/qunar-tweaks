@@ -1,6 +1,11 @@
 name: Build QNByPass
-on: [push,workflow_dispatch]
-concurrency: { group: ci-${{ github.ref }}, cancel-in-progress: true }
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: macos-latest
