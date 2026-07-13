@@ -1,6 +1,11 @@
 name: Build QNByPass
-on: [push,workflow_dispatch]
-concurrency: { group: ci-${{ github.ref }}, cancel-in-progress: true }
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: macos-latest
@@ -21,11 +26,15 @@ jobs:
         cp filter.plist deb/var/jb/Library/MobileSubstrate/DynamicLibraries/QNByPass.plist
         cp qnbypass.sh deb/var/jb/usr/bin/qnbypass
         chmod +x deb/var/jb/usr/bin/qnbypass
-        printf 'Package: com.qnbypass.dopamine\nName: QNByPass\nVersion: 3.1.0\nArchitecture: iphoneos-arm64\nDescription: Qunar jailbreak bypass+spoof (shell)\nMaintainer: goulili75\nSection: Tweaks\nDepends: mobilesubstrate, firmware (>= 15.0)\n' > deb/DEBIAN/control
-        printf '#!/bin/sh\nkillall -9 SpringBoard 2>/dev/null || true\n' > deb/DEBIAN/postinst && chmod 0755 deb/DEBIAN/postinst
-        brew install dpkg 2>/dev/null||true
+        printf 'Package: com.qnbypass.dopamine\nName: QNByPass\nVersion: 3.1.0\nArchitecture: iphoneos-arm64\nDescription: Qunar bypass\nMaintainer: goulili75\nSection: Tweaks\nDepends: mobilesubstrate\n' > deb/DEBIAN/control
+        printf '#!/bin/sh\nkillall -9 SpringBoard 2>/dev/null\n' > deb/DEBIAN/postinst && chmod 0755 deb/DEBIAN/postinst
+        brew install dpkg 2>/dev/null || true
         mkdir -p packages
-        command -v dpkg-deb && dpkg-deb -Zgzip -b deb packages/com.qnbypass_3.1.0.deb||tar czf packages/QNByPass.tar.gz -C deb .
+        command -v dpkg-deb && dpkg-deb -Zgzip -b deb packages/com.qnbypass_3.1.0.deb || tar czf packages/QNByPass.tar.gz -C deb .
         ls -la packages/
-    - uses: actions/upload-artifact@v4
-      with: { name: QNByPass-DEB, path: QNByPass/packages/*, retention-days: 30 }
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: QNByPass-DEB
+        path: QNByPass/packages/*
+        retention-days: 30
