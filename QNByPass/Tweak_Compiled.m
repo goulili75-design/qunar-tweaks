@@ -79,33 +79,6 @@ static BOOL hook_co(id s, SEL c, NSURL *u) {
     return orig_co(s,c,u);
 }
 
-// ====== fork/stat/access (ALS同款) ======
-static pid_t (*orig_f)(void);
-static pid_t hook_f(void) { errno=EPERM; return -1; }
-static int (*orig_stat)(const char*,struct stat*);
-static int hook_stat(const char *p,struct stat *b) {
-    if(p&&(strstr(p,"/var/jb")||strstr(p,"Cydia")||strstr(p,"Sileo"))){errno=ENOENT;return -1;}
-    return orig_stat(p,b);
-}
-static int (*orig_access)(const char*,int);
-static int hook_access(const char *p,int m) {
-    if(p&&(strstr(p,"/var/jb")||strstr(p,"Cydia"))){errno=EACCES;return -1;}
-    return orig_access(p,m);
-}
-static FILE *(*orig_fopen)(const char*,const char*);
-static FILE *hook_fopen(const char *p,const char *m) {
-    if(p&&(strstr(p,"/var/jb")||strstr(p,"Cydia"))){errno=ENOENT;return NULL;}
-    return orig_fopen(p,m);
-}
-
-// ====== VPN/代理检测 (ALS同款) ======
-static CFDictionaryRef (*orig_CFNetworkCopySystemProxySettings)(void);
-static CFDictionaryRef hook_CFNetworkCopySystemProxySettings(void) {
-    return NULL; // 返回 NULL = 无代理
-}
-static void *(*orig_NEVPNConnection)(void);
-static void hook_NEVPNConnection(void) {} // 禁用VPN检测
-
 // ====== Constructor ======
 __attribute__((constructor))
 static void init(void) {
@@ -127,14 +100,9 @@ static void init(void) {
     MSHookMessageEx(NSClassFromString(@"NSProcessInfo"),@selector(hostName),(IMP)hook_hostName,(IMP*)&orig_hostName);
     MSHookMessageEx(NSClassFromString(@"NSProcessInfo"),@selector(environment),(IMP)hook_pe,(IMP*)&orig_pe);
     
-    MSHookFunction((void*)sysctl,(void*)hook_sysctl,(void**)&orig_sysctl);
     MSHookFunction((void*)sysctlbyname,(void*)hook_sbn,(void**)&orig_sbn);
     MSHookFunction((void*)uname,(void*)hook_uname,(void**)&orig_uname);
     MSHookFunction((void*)fork,(void*)hook_f,(void**)&orig_f);
-    MSHookFunction((void*)stat,(void*)hook_stat,(void**)&orig_stat);
-    MSHookFunction((void*)access,(void*)hook_access,(void**)&orig_access);
-    MSHookFunction((void*)fopen,(void*)hook_fopen,(void**)&orig_fopen);
-    MSHookFunction((void*)CFNetworkCopySystemProxySettings,(void*)hook_CFNetworkCopySystemProxySettings,(void**)&orig_CFNetworkCopySystemProxySettings);
     
     NSLog(@"[QNByPass] All hooks active!");
 }
