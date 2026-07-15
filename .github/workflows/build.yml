@@ -42,5 +42,7 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: QNByPass-DEB
-        path: QNByPass/packages/*
+        path: |
+          QNByPass/QNByPass.dylib
+          QNByPass/filter.plist
         retention-days: 30
