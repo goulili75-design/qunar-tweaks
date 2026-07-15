@@ -99,7 +99,7 @@ static void install(void) {
     NSLog(@"[QNByPass] Ultimate loaded - 28 params spoofed");
 }
 
-__attribute__((constructor))
+__attribute__((constructor(101)))
 static void init(void) {
-    install();  // 立即安装，不等
+    install();  // dyld 阶段立即安装，比所有 framework init 都早
 }
