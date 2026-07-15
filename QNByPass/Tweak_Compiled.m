@@ -1,5 +1,4 @@
-// QNByPass - 纯 Dopamine 版
-// 越狱屏蔽 + 设备改机，libhooker 自动注入
+// QNByPass v10 - 终极版：CTT + Header + Cookie + 越狱屏蔽
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
@@ -8,6 +7,7 @@
 #import <sys/sysctl.h>
 #import <unistd.h>
 #import <fcntl.h>
+#import <dlfcn.h>
 #import "substrate.h"
 
 static NSDictionary *loadCfg(void) {
@@ -73,7 +73,40 @@ static pid_t hook_f(void) { errno = EPERM; return -1; }
 // NSComparisonPredicate 短路——防 iOS16 "借刀杀人" 检测
 static BOOL (*orig_predEval)(id, SEL, id, id);
 static BOOL hook_predEval(id self, SEL _cmd, id obj, id vars) {
-    return NO; // 永远返回 NO，阻止 _predicateSecurityAction
+    return NO;
+}
+
+// === v10 新增：CTTelephonyNetworkInfo 运营商伪装 ===
+static CTCarrier *(*orig_subCarrier)(id, SEL);
+static CTCarrier *hook_subCarrier(id self, SEL _cmd) {
+    CTCarrier *c = orig_subCarrier(self, _cmd);
+    if (c) {
+        // 伪装运营商信息
+        object_setClass(c, [CTCarrier class]); // 确保是 CTCarrier
+        [c setValue:@"中国移动" forKey:@"carrierName"];
+        [c setValue:@"46000" forKey:@"mobileCountryCode"];
+        [c setValue:@"02" forKey:@"mobileNetworkCode"];
+    }
+    return c;
+}
+
+// === v10 新增：NSMutableURLRequest Q-* Header 过滤 ===
+static void (*orig_setValue)(id, SEL, NSString*, NSString*);
+static void hook_setValue(id self, SEL _cmd, NSString *value, NSString *field) {
+    if (field && [field hasPrefix:@"Q-"]) return;  // 拦截 Q-* 自定义 header
+    orig_setValue(self, _cmd, value, field);
+}
+
+// === v10 新增：NSHTTPCookieStorage Cookie 清理 ===
+static NSArray *(*orig_cookies)(id, SEL);
+static NSArray *hook_cookies(id self, SEL _cmd) {
+    NSArray *all = orig_cookies(self, _cmd);
+    NSMutableArray *filtered = [NSMutableArray array];
+    for (NSHTTPCookie *c in all) {
+        if ([c.name hasPrefix:@"QN"] && [c.domain containsString:@"qunar"]) continue;
+        [filtered addObject:c];
+    }
+    return filtered;
 }
 
 __attribute__((constructor))
@@ -108,5 +141,14 @@ static void init(void) {
     // NSComparisonPredicate 短路防护（FanDuel 同款）
     MSHookMessageEx(NSClassFromString(@"NSComparisonPredicate"), @selector(evaluateWithObject:substitutionVariables:), (IMP)hook_predEval, (IMP*)&orig_predEval);
     
-    NSLog(@"[QNByPass] All hooks active!");
+    // v10 新增：运营商伪装
+    MSHookMessageEx(NSClassFromString(@"CTTelephonyNetworkInfo"), @selector(subscriberCellularProvider), (IMP)hook_subCarrier, (IMP*)&orig_subCarrier);
+    
+    // v10 新增：Header 过滤
+    MSHookMessageEx(NSClassFromString(@"NSMutableURLRequest"), @selector(setValue:forHTTPHeaderField:), (IMP)hook_setValue, (IMP*)&orig_setValue);
+    
+    // v10 新增：Cookie 清理
+    MSHookMessageEx(NSClassFromString(@"NSHTTPCookieStorage"), @selector(cookies), (IMP)hook_cookies, (IMP*)&orig_cookies);
+    
+    NSLog(@"[QNByPass] All hooks active! (v10)");
 }
