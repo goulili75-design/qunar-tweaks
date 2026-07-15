@@ -76,34 +76,28 @@ static BOOL hook_predEval(id self, SEL _cmd, id obj, id vars) {
     return NO;
 }
 
-// === v10 新增：CTTelephonyNetworkInfo 运营商伪装 ===
-static CTCarrier *(*orig_subCarrier)(id, SEL);
-static CTCarrier *hook_subCarrier(id self, SEL _cmd) {
-    CTCarrier *c = orig_subCarrier(self, _cmd);
-    if (c) {
-        // 伪装运营商信息
-        object_setClass(c, [CTCarrier class]); // 确保是 CTCarrier
-        [c setValue:@"中国移动" forKey:@"carrierName"];
-        [c setValue:@"46000" forKey:@"mobileCountryCode"];
-        [c setValue:@"02" forKey:@"mobileNetworkCode"];
-    }
-    return c;
+// === v10：运营商伪装（返回 nil = 无SIM卡） ===
+static id (*orig_subCarrier)(id, SEL);
+static id hook_subCarrier(id self, SEL _cmd) {
+    return nil; // 返回 nil，隐藏运营商信息
 }
 
-// === v10 新增：NSMutableURLRequest Q-* Header 过滤 ===
+// === v10：NSMutableURLRequest Header 过滤 ===
 static void (*orig_setValue)(id, SEL, NSString*, NSString*);
 static void hook_setValue(id self, SEL _cmd, NSString *value, NSString *field) {
-    if (field && [field hasPrefix:@"Q-"]) return;  // 拦截 Q-* 自定义 header
+    if (field && [field hasPrefix:@"Q-"]) return;
     orig_setValue(self, _cmd, value, field);
 }
 
-// === v10 新增：NSHTTPCookieStorage Cookie 清理 ===
+// === v10：Cookie 清理 ===
 static NSArray *(*orig_cookies)(id, SEL);
 static NSArray *hook_cookies(id self, SEL _cmd) {
     NSArray *all = orig_cookies(self, _cmd);
     NSMutableArray *filtered = [NSMutableArray array];
-    for (NSHTTPCookie *c in all) {
-        if ([c.name hasPrefix:@"QN"] && [c.domain containsString:@"qunar"]) continue;
+    for (id c in all) {
+        NSString *name = [c valueForKey:@"name"];
+        NSString *domain = [c valueForKey:@"domain"];
+        if ([name hasPrefix:@"QN"] && [domain containsString:@"qunar"]) continue;
         [filtered addObject:c];
     }
     return filtered;
