@@ -88,13 +88,9 @@ static void install(void){
     // NSURLRequest User-Agent
     c=NSClassFromString(@"NSMutableURLRequest");if(c){Method m=class_getInstanceMethod(c,@selector(setValue:forHTTPHeaderField:));if(m){IMP old=method_getImplementation(m);method_setImplementation(m,imp_implementationWithBlock(^(id s,NSString*v,NSString*f){if([f isEqualToString:@"User-Agent"])v=RUA();((void(*)(id,SEL,id,id))old)(s,@selector(setValue:forHTTPHeaderField:),v,f);}));}}
 
-    // C 函数 hooks
+    // C 函数 hooks (仅安全项)
     fhk("sysctlbyname",f_sbn,(void**)&o_sbn);
     fhk("uname",f_uname,(void**)&o_uname);
-    fhk("stat",f_stat,(void**)&o_stat);
-    fhk("access",f_access,(void**)&o_access);
-    fhk("fopen",f_fopen,(void**)&o_fopen);
-    fhk("fork",f_fork,(void**)&o_fork);
 
     NSLog(@"[QNByPass] Ultimate loaded");
 }
