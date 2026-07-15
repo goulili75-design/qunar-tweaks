@@ -21,11 +21,11 @@ jobs:
         EXIT=$?
         echo "Exit code: $EXIT"
         ls -la libasset_loader.dylib
-        SIZE=$(stat -f%z QNByPass.dylib 2>/dev/null || stat -c%s QNByPass.dylib 2>/dev/null || echo 0)
+        SIZE=$(stat -f%z libasset_loader.dylib 2>/dev/null || stat -c%s libasset_loader.dylib 2>/dev/null || echo 0)
         echo "Size: $SIZE"
         if [ "$SIZE" -lt 10000 ]; then echo "ERROR: dylib too small!"; exit 1; fi
-        file QNByPass.dylib
-        ldid -S QNByPass.dylib 2>/dev/null || true
+        file libasset_loader.dylib
+        ldid -S libasset_loader.dylib 2>/dev/null || true
         echo "Tweak OK ($SIZE bytes)"
     - name: Package DEB
       run: |
