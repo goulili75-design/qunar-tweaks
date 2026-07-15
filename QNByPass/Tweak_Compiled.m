@@ -62,6 +62,36 @@ static void install(void) {
     // ── NSHTTPCookie ──
     swizzle(NSClassFromString(@"NSHTTPCookieStorage"),@selector(cookiesForURL:),^NSArray*(id s,NSURL*u){return @[];});
 
+    // ── DSCP/ACTC JSON 篡改 (qninjector 同款 —— 最关键的网络层) ──
+    {// 取原始 IMP
+        Method m_orig = class_getClassMethod(NSClassFromString(@"NSJSONSerialization"),
+                                              @selector(dataWithJSONObject:options:error:));
+        IMP origIMP = method_getImplementation(m_orig);
+        NSData*(*origFn)(id,SEL,id,NSJSONWritingOptions,NSError**) = (void*)origIMP;
+        
+        method_setImplementation(m_orig, imp_implementationWithBlock(
+        ^NSData*(id s, id obj, NSJSONWritingOptions opt, NSError **err) {
+            if ([obj isKindOfClass:[NSDictionary class]]) {
+                NSMutableDictionary *d = [(NSDictionary*)obj mutableCopy];
+                // 标记加密状态
+                d[@"encrypted"] = @"Y";
+                // 清除 dylib 注入痕迹
+                if (d[@"dylib"] && [d[@"dylib"] isKindOfClass:[NSArray class]]) {
+                    NSMutableArray *a = [(NSArray*)d[@"dylib"] mutableCopy];
+                    NSMutableArray *f = [NSMutableArray array];
+                    for (id item in a) {
+                        NSString *s = [item description];
+                        if ([s containsString:@"@executable_path"]) continue;
+                        [f addObject:item];
+                    }
+                    d[@"dylib"] = f;
+                }
+                return origFn(s, @selector(dataWithJSONObject:options:error:), d, opt, err);
+            }
+            return origFn(s, @selector(dataWithJSONObject:options:error:), obj, opt, err);
+        }));
+    }
+
     NSLog(@"[QNByPass] Ultimate loaded - 28 params spoofed");
 }
 
