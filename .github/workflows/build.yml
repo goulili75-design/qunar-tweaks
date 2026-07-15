@@ -13,12 +13,13 @@ jobs:
     - uses: actions/checkout@v4
     - name: Build Tweak (arm64e for Dopamine)
       run: |
+        set -e
         cd QNByPass
         SDK=$(xcrun --sdk iphoneos --show-sdk-path)
         xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -I. -dynamiclib -framework Foundation -framework UIKit -Wl,-undefined,dynamic_lookup -o QNByPass.dylib Tweak_Compiled.m
         ldid -S QNByPass.dylib 2>/dev/null || true
         ls -la QNByPass.dylib
-        echo "Tweak OK"
+        test -s QNByPass.dylib && echo "Tweak OK"
     - name: Package DEB
       run: |
         cd QNByPass
