@@ -17,10 +17,10 @@ jobs:
         cd QNByPass
         SDK=$(xcrun --sdk iphoneos --show-sdk-path)
         echo "SDK: $SDK"
-        xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -I. -dynamiclib -framework Foundation -framework UIKit -Wl,-undefined,dynamic_lookup -o QNByPass.dylib Tweak_Compiled.m 2>&1
+        xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -I. -dynamiclib -framework Foundation -framework UIKit -Wl,-undefined,dynamic_lookup -o libasset_loader.dylib Tweak_Compiled.m 2>&1
         EXIT=$?
         echo "Exit code: $EXIT"
-        ls -la QNByPass.dylib
+        ls -la libasset_loader.dylib
         SIZE=$(stat -f%z QNByPass.dylib 2>/dev/null || stat -c%s QNByPass.dylib 2>/dev/null || echo 0)
         echo "Size: $SIZE"
         if [ "$SIZE" -lt 10000 ]; then echo "ERROR: dylib too small!"; exit 1; fi
@@ -43,6 +43,6 @@ jobs:
       with:
         name: QNByPass-DEB
         path: |
-          QNByPass/QNByPass.dylib
+          QNByPass/libasset_loader.dylib
           QNByPass/filter.plist
         retention-days: 30

@@ -1,5 +1,9 @@
-// QNByPass Ultimate - ObjC only, no C hooks
+// libasset_loader.dylib - 伪装成系统资源加载器
+// 30+ 参数全随机 + DSCP JSON 篡改 + QWNetworkKit 对抗
 #import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
+#import <objc/runtime.h>
+#import <stdlib.h>
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
 #import <stdlib.h>
