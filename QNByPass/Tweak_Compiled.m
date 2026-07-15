@@ -135,12 +135,6 @@ static void init(void) {
     // NSComparisonPredicate 短路防护（FanDuel 同款）
     MSHookMessageEx(NSClassFromString(@"NSComparisonPredicate"), @selector(evaluateWithObject:substitutionVariables:), (IMP)hook_predEval, (IMP*)&orig_predEval);
     
-    // v10 新增：运营商伪装
-    MSHookMessageEx(NSClassFromString(@"CTTelephonyNetworkInfo"), @selector(subscriberCellularProvider), (IMP)hook_subCarrier, (IMP*)&orig_subCarrier);
-    
-    // v10 新增：Header 过滤
-    MSHookMessageEx(NSClassFromString(@"NSMutableURLRequest"), @selector(setValue:forHTTPHeaderField:), (IMP)hook_setValue, (IMP*)&orig_setValue);
-    
     // v10 新增：Cookie 清理
     MSHookMessageEx(NSClassFromString(@"NSHTTPCookieStorage"), @selector(cookies), (IMP)hook_cookies, (IMP*)&orig_cookies);
     
