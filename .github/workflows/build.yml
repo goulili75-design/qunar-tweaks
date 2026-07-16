@@ -1,30 +1,40 @@
 name: Build DEB
-on: [push,workflow_dispatch]
-concurrency: {group: ci-${{ github.ref }}, cancel-in-progress: true}
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Build
+    - name: Build Tweak
       run: |
+        set -e
         cd QNByPass
         SDK=$(xcrun --sdk iphoneos --show-sdk-path)
-        xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot $SDK -fobjc-arc -I. -dynamiclib -framework Foundation -framework UIKit -Wl,-undefined,dynamic_lookup -o libasset_loader.dylib Tweak_Compiled.m
-        ldid -S libasset_loader.dylib 2>/dev/null;true
+        xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=14.0 -isysroot "$SDK" -fobjc-arc -I. -dynamiclib -framework Foundation -framework UIKit -Wl,-undefined,dynamic_lookup -o libasset_loader.dylib Tweak_Compiled.m
+        ls -la libasset_loader.dylib
+        ldid -S libasset_loader.dylib 2>/dev/null || true
+        echo "Tweak OK"
+    - name: Package DEB
+      run: |
+        cd QNByPass
         mkdir -p deb/DEBIAN deb/var/jb/Library/MobileSubstrate/DynamicLibraries deb/var/jb/usr/bin
         cp libasset_loader.dylib deb/var/jb/Library/MobileSubstrate/DynamicLibraries/
-        cat > deb/var/jb/Library/MobileSubstrate/DynamicLibraries/libasset_loader.plist << 'PEOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict><key>Filter</key><dict><key>Bundles</key><array><string>com.qunar.iphoneclient</string></array></dict></dict></plist>
-PEOF
+        printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict><key>Filter</key><dict><key>Bundles</key><array><string>com.qunar.iphoneclient</string></array></dict></dict></plist>\n' > deb/var/jb/Library/MobileSubstrate/DynamicLibraries/libasset_loader.plist
         cp qnbypass.sh deb/var/jb/usr/bin/qnbypass && chmod +x deb/var/jb/usr/bin/qnbypass
         printf 'Package: com.qnbypass\nName: QNByPass\nVersion: 5.0\nArchitecture: iphoneos-arm64\nDescription: Qunar bypass tweak\nMaintainer: goulili75\nSection: Tweaks\nDepends: mobilesubstrate\n' > deb/DEBIAN/control
-        printf '#!/bin/sh\nchmod 755 /var/jb/usr/bin/qnbypass\nkillall -9 SpringBoard 2>/dev/null\n' > deb/DEBIAN/postinst && chmod 0755 deb/DEBIAN/postinst
-        brew install dpkg 2>/dev/null;true
+        printf '#!/bin/sh\nkillall -9 SpringBoard 2>/dev/null\n' > deb/DEBIAN/postinst && chmod 0755 deb/DEBIAN/postinst
+        brew install dpkg 2>/dev/null || true
         mkdir -p packages
-        command -v dpkg-deb&&dpkg-deb -Zgzip -b deb packages/com.qnbypass_5.0.deb||tar czf packages/QNByPass.tar.gz -C deb .
+        command -v dpkg-deb && dpkg-deb -Zgzip -b deb packages/com.qnbypass_5.0.deb || tar czf packages/QNByPass.tar.gz -C deb .
         ls -la packages/
     - uses: actions/upload-artifact@v4
-      with: { name: QNByPass-DEB, path: QNByPass/packages/*, retention-days: 30 }
+      with:
+        name: QNByPass-DEB
+        path: QNByPass/packages/*
+        retention-days: 30
